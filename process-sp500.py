@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import re
+from datetime import datetime
 
 sp500_data = []
 
@@ -16,14 +17,15 @@ def convert_csv_to_array( sp500_data ):
         tmp = line.split(',')
         tmp[6] = tmp[6].rstrip('\r\n')
         tmp[6] = float(tmp[6])
-        sp500_array.insert(0, [tmp[0], tmp[6]])
+        
+        sp500_array.insert(0, [datetime.strptime(tmp[0],"%m/%d/%Y").strftime("%Y%m%d"), tmp[6]])
 
     return sp500_array
 
 sp500_array = convert_csv_to_array(sp500_data)
 
 # for tmp in sp500_array:
-#     print tmp
+#     print tmp[0], tmp[1]
 
 def find_alltime_highs(sp500_array):
     "find sp500 all time highs"
