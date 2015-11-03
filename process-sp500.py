@@ -32,7 +32,7 @@ def find_alltime_highs(sp500_array):
     sp500_alltime_highs = []
     max = 0
 
-    for i in range(0, (len(sp500_array) - 1)):
+    for i in range(0, len(sp500_array)):
         cur = sp500_array[i][1]
         if cur > max:
             max = cur
@@ -48,7 +48,7 @@ sp500_alltime_highs = find_alltime_highs(sp500_array)
 
 def linear_between_highs(sp500_array, sp500_alltime_highs):
     "find the lowest betwee 2 highs"
-    for i in range (0, (len(sp500_alltime_highs) - 2)):
+    for i in range (0, (len(sp500_alltime_highs) - 1)):
         
         min = sp500_alltime_highs[i][1]
         decrease_array = []
@@ -85,10 +85,25 @@ def linear_between_highs(sp500_array, sp500_alltime_highs):
 
 linear_between_highs(sp500_array, sp500_alltime_highs);
 
+# for tmp in sp500_alltime_highs:
+#     print tmp[0], tmp[1]
+
+#     if len(tmp) == 3:
+#         continue
+    
+#     for i in range(0, len(tmp[3])):
+#         print tmp[3][i][0], tmp[3][i][1]
+
+#     if len(tmp) == 4:
+#         continue
+    
+#     for i in range(0, len(tmp[4])):
+#         print tmp[4][i][0], tmp[4][i][1]
+
 for tmp in sp500_alltime_highs:
     print tmp;
 
-
+    
 
 
 # sp500_m_d = find_sp500_month_data(sp500_data)
