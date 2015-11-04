@@ -2,6 +2,7 @@
 
 import re
 from datetime import datetime
+from pprint import pprint
 
 sp500_data = []
 
@@ -100,8 +101,8 @@ linear_between_highs(sp500_array, sp500_alltime_highs);
 #     for i in range(0, len(tmp[4])):
 #         print tmp[4][i][0], tmp[4][i][1]
 
-for tmp in sp500_alltime_highs:
-    print tmp;
+# for tmp in sp500_alltime_highs:
+#     print tmp;
 
     
 
@@ -127,3 +128,68 @@ for tmp in sp500_alltime_highs:
 
 #     return sp500_data_month
 
+import os
+import pickle
+from yahoo_finance import Share
+
+# yahoo = Share("^GSPC")
+# print yahoo.get_price()
+
+# pprint(yahoo.get_historical('1949-11-01', datetime.today().strftime("%Y-%m-%d")))
+
+
+class yahoo_historical_analysis:
+    def __init__(self,ticker):
+        self.today = datetime.today().strftime("%Y-%m-%d")
+        self.start = "1950-01-01"
+        self.ticker = ticker
+        self.data_history = []
+        self.__update_data_history(ticker, self.start)
+
+        description = "Get a stock ticker's historical data from yahoo"
+
+
+    def __update_data_history(self, ticker, start):
+        yahoo = Share(ticker)
+        data_folder = "./data"
+        data_ticker = data_folder + "/" + ticker + ".txt"
+
+        # Use ticker as filename to store historical data into a text
+        # file. only update the delta up to today
+        print "Update %s historical data..." %ticker
+
+        if not os.path.exists(data_folder):
+            print "The data folder %s dose not exist!" % data_folder
+            print "Create %s..." % data_folder
+            os.mkdir(data_folder)
+
+        if not os.path.exists(data_ticker):
+            print("The history data dose not exist!")
+            self.data_history = yahoo.get_historical(start, self.today)
+            pickle.dump(self.data_history, open(data_ticker, "wb"))
+            return
+
+        self.data_history = pickle.load(open(data_ticker, "rb"))
+        
+        if not self.data_history:
+            print "Cannot get history data!"
+            return
+
+        prev_date = datetime.strptime(self.data_history[0]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
+        last_date = datetime.strptime(self.data_history[-1]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
+
+        if self.today > prev_date:
+            print "Update data from %s to %s" %(prev_date, self.today)
+            delta_history = yahoo.get_historical(prev_date, self.today)
+            self.data_history = delta_history + self.data_history
+            
+        if last_date > start:
+            print "Update data from %s to %s" %(start, last_date)
+            delta_history = yahoo.get_historical(start, last_date)
+            self.data_history = self.data_history + delta_history
+        
+        pickle.dump(self.data_history, open(data_ticker, "wb"))
+
+
+gspc = yahoo_historical_analysis("^GSPC")
+qcom = yahoo_historical_analysis("QCOM")
