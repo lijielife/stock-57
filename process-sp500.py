@@ -140,16 +140,17 @@ from yahoo_finance import Share
 
 class yahoo_historical_analysis:
     def __init__(self,ticker):
+        self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).strftime("%Y-%m-%d")
         self.today = datetime.today().strftime("%Y-%m-%d")
         self.start = "1950-01-01"
         self.ticker = ticker
         self.data_history = []
-        self.__update_data_history(ticker, self.start)
+        self.__update_data_history(ticker, self.start, self.yesterday)
 
         description = "Get a stock ticker's historical data from yahoo"
 
 
-    def __update_data_history(self, ticker, start):
+    def __update_data_history(self, ticker, start, end):
         yahoo = Share(ticker)
         data_folder = "./data"
         data_ticker = data_folder + "/" + ticker + ".txt"
@@ -159,13 +160,14 @@ class yahoo_historical_analysis:
         print "Update %s historical data..." %ticker
 
         if not os.path.exists(data_folder):
-            print "The data folder %s dose not exist!" % data_folder
+            print "The data folder %s dose not exist!" %data_folder
             print "Create %s..." % data_folder
             os.mkdir(data_folder)
 
         if not os.path.exists(data_ticker):
-            print("The history data dose not exist!")
-            self.data_history = yahoo.get_historical(start, self.today)
+            print "Create %s historical data from yahoo..." %ticker
+            self.data_history = yahoo.get_historical(start, end)
+            self.data_history.reverse()
             pickle.dump(self.data_history, open(data_ticker, "wb"))
             return
 
@@ -175,21 +177,16 @@ class yahoo_historical_analysis:
             print "Cannot get history data!"
             return
 
-        prev_date = datetime.strptime(self.data_history[0]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
-        last_date = datetime.strptime(self.data_history[-1]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
+        prev_date = datetime.strptime(self.data_history[-1]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
 
-        if self.today > prev_date:
-            print "Update data from %s to %s" %(prev_date, self.today)
-            delta_history = yahoo.get_historical(prev_date, self.today)
-            self.data_history = delta_history + self.data_history
-            
-        if last_date > start:
-            print "Update data from %s to %s" %(start, last_date)
-            delta_history = yahoo.get_historical(start, last_date)
-            self.data_history = self.data_history + delta_history
-        
-        pickle.dump(self.data_history, open(data_ticker, "wb"))
-
+        if end > prev_date:
+            print "Update %s data from %s to %s" %(ticker, prev_date, end)
+            delta_history = yahoo.get_historical(prev_date, end)
+            delta_history.reverse()
+            self.data_history += delta_history
+            pickle.dump(self.data_history, open(data_ticker, "wb"))
+        else:
+            print "Already up-to-date"
 
 gspc = yahoo_historical_analysis("^GSPC")
 qcom = yahoo_historical_analysis("QCOM")
