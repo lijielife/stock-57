@@ -139,10 +139,12 @@ from yahoo_finance import Share
 
 
 class yahoo_historical_analysis:
-    data_down = []
-    data_down_of_days = {}
-    data_up = []
+
     data_history_close = {}
+    data_history_down = []
+    data_days_of_down = {}
+    data_dates_of_down = {}
+
     
     def __init__(self,ticker):
         self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).strftime("%Y-%m-%d")
@@ -151,10 +153,12 @@ class yahoo_historical_analysis:
         self.ticker = ticker
         self.data_history = []
         self.__update_data_history(ticker, self.start, self.yesterday)
+        self.__update_percent_change_of_one_day()
+
         description = "Get a stock ticker's historical data from yahoo"
 
     def __update_data_history(self, ticker, start, end):
-        yahoo = Share(ticker)
+        self.yahoo = Share(ticker)
         data_folder = "./data"
         data_ticker = data_folder + "/" + ticker + ".txt"
 
@@ -169,7 +173,7 @@ class yahoo_historical_analysis:
 
         if not os.path.exists(data_ticker):
             print "Create %s historical data from yahoo..." %ticker
-            self.data_history = yahoo.get_historical(start, end)
+            self.data_history = self.yahoo.get_historical(start, end)
             self.data_history.reverse()
             pickle.dump(self.data_history, open(data_ticker, "wb"))
             return
@@ -184,7 +188,7 @@ class yahoo_historical_analysis:
 
         if end > prev_date:
             print "Update %s data from %s to %s" %(ticker, prev_date, end)
-            delta_history = yahoo.get_historical(prev_date, end)
+            delta_history = self.yahoo.get_historical(prev_date, end)
             delta_history.reverse()
             self.data_history += delta_history
             pickle.dump(self.data_history, open(data_ticker, "wb"))
@@ -192,32 +196,61 @@ class yahoo_historical_analysis:
             print "Already up-to-date"
 
         for i in range(0, len(self.data_history)):
-            self.data_history_close[self.data_history[i]["Date"]] = self.data_history[i]["Close"]
+            self.data_history_close[self.data_history[i]["Date"]] = dict()
+            self.data_history_close[self.data_history[i]["Date"]]["Close"] = float(self.data_history[i]["Close"])
 
-    def get_downward_stat(self):
-        keys = self.data_history_close.keys()
-        keys.sort()
 
+    def __update_percent_change_of_one_day(self):
+        prev = 0
+        for key, value in sorted(self.data_history_close.items()):
+            if prev == 0:
+                prev = value["Close"]
+            
+            value["Change"] = (value["Close"] - prev) * 100 / prev
+            prev = value["Close"]
+
+
+    def get_data_history_down(self):
         down = {}
-        prev_price = self.data_history_close[keys[0]]
-        for key in keys:
-            if self.data_history_close[key] < prev_price:
-                down[key] = self.data_history_close[key]
+        prev = 0
+
+        for key, value in sorted(self.data_history_close.items()):
+            if prev == 0:
+                prev = value["Close"]
+
+            if value["Close"] < prev:
+                down[key] = value
             else:
                 if down:
-                    self.data_down.append(down)
+                    self.data_history_down.append(down)
                     down = {}
-            prev_price = self.data_history_close[key]
+            prev = value["Close"]
 
-        for item in self.data_down:
-            if self.data_down_of_days.get(len(item)):
-                self.data_down_of_days[len(item)] += 1
-            else:
-                self.data_down_of_days[len(item)] = 1
+    def get_data_days_of_down(self):
+        for item in self.data_history_down:
+            if self.data_days_of_down.get(len(item)):
+                self.data_days_of_down[len(item)] += 1
+            else: # if no value yet, put 1
+                self.data_days_of_down[len(item)] = 1
 
-        pprint(self.data_down_of_days)
 
+    def get_data_dates_of_down(self):
+
+        for item in self.data_history_down:
+            if not self.data_dates_of_down.get(len(item)):
+                self.data_dates_of_down[len(item)] = []
+            self.data_dates_of_down[len(item)].append(item)
+            
+        # pprint(self.data_dates_of_down[3])
+        
 gspc = yahoo_historical_analysis("^GSPC")
-# qcom = yahoo_historical_analysis("QCOM")
+qcom = yahoo_historical_analysis("QCOM")
 
-gspc.get_downward_stat()
+
+gspc.get_data_history_down()
+gspc.get_data_days_of_down()
+gspc.get_data_dates_of_down()
+
+
+print gspc.yahoo.get_price()
+print qcom.yahoo.get_price()
