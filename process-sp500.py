@@ -139,6 +139,11 @@ from yahoo_finance import Share
 
 
 class yahoo_historical_analysis:
+    data_down = []
+    data_down_of_days = {}
+    data_up = []
+    data_history_close = {}
+    
     def __init__(self,ticker):
         self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).strftime("%Y-%m-%d")
         self.today = datetime.today().strftime("%Y-%m-%d")
@@ -146,9 +151,7 @@ class yahoo_historical_analysis:
         self.ticker = ticker
         self.data_history = []
         self.__update_data_history(ticker, self.start, self.yesterday)
-
         description = "Get a stock ticker's historical data from yahoo"
-
 
     def __update_data_history(self, ticker, start, end):
         yahoo = Share(ticker)
@@ -188,5 +191,33 @@ class yahoo_historical_analysis:
         else:
             print "Already up-to-date"
 
+        for i in range(0, len(self.data_history)):
+            self.data_history_close[self.data_history[i]["Date"]] = self.data_history[i]["Close"]
+
+    def get_downward_stat(self):
+        keys = self.data_history_close.keys()
+        keys.sort()
+
+        down = {}
+        prev_price = self.data_history_close[keys[0]]
+        for key in keys:
+            if self.data_history_close[key] < prev_price:
+                down[key] = self.data_history_close[key]
+            else:
+                if down:
+                    self.data_down.append(down)
+                    down = {}
+            prev_price = self.data_history_close[key]
+
+        for item in self.data_down:
+            if self.data_down_of_days.get(len(item)):
+                self.data_down_of_days[len(item)] += 1
+            else:
+                self.data_down_of_days[len(item)] = 1
+
+        pprint(self.data_down_of_days)
+
 gspc = yahoo_historical_analysis("^GSPC")
-qcom = yahoo_historical_analysis("QCOM")
+# qcom = yahoo_historical_analysis("QCOM")
+
+gspc.get_downward_stat()
