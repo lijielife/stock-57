@@ -140,18 +140,13 @@ from yahoo_finance import Share
 
 class yahoo_historical_analysis:
 
-    data_history_close = {}
-    data_history_down = []
-    data_days_of_down = {}
-    data_dates_of_down = {}
-
-    
-    def __init__(self,ticker):
+    def __init__(self, ticker):
         self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).strftime("%Y-%m-%d")
         self.today = datetime.today().strftime("%Y-%m-%d")
         self.start = "1950-01-01"
         self.ticker = ticker
         self.data_history = []
+        self.data_history_close = {}
         self.__update_data_history(ticker, self.start, self.yesterday)
         self.__update_percent_change_of_one_day()
 
@@ -195,62 +190,176 @@ class yahoo_historical_analysis:
         else:
             print "Already up-to-date"
 
-        for i in range(0, len(self.data_history)):
-            self.data_history_close[self.data_history[i]["Date"]] = dict()
-            self.data_history_close[self.data_history[i]["Date"]]["Close"] = float(self.data_history[i]["Close"])
-
+        for item in self.data_history:
+            self.data_history_close[item["Date"]] = dict()
+            self.data_history_close[item["Date"]]["Price"] = float(item["Close"])
+        
+        pprint(self.data_history_close)
+        
 
     def __update_percent_change_of_one_day(self):
         prev = 0
         for key, value in sorted(self.data_history_close.items()):
             if prev == 0:
-                prev = value["Close"]
+                prev = value["Price"]
             
-            value["Change"] = (value["Close"] - prev) * 100 / prev
-            prev = value["Close"]
+            value["Change"] = (value["Price"] - prev) * 100 / prev
+            prev = value["Price"]
 
+    # Remove the days that don't have significant changes in terms of
+    # a threshold. 
+    # 1. if day 2 has a change less than < threshold, day 2 will be discarsed
+    # 2. day 3's change will be updated to a new percentage relative to day 1
+    # 3. if day 3 has a change less than < threshold, day 3 will be discarsed
+    # 4. This process will go on 
+    def remove_insignificant_change(self, price_data, threshold):
+        prev = 0
+        price_data_modified = {}
+        
+        for key, value in sorted(price_data.iteritems()):
+            if prev == 0:
+                prev = value["Price"]
+                price_data_modified[key] = value;
 
-    def get_data_history_down(self):
+            chg = (value["Price"] - prev) * 100 / prev
+
+            if abs(chg) > threshold:
+                value["Change"] = chg
+                prev = value["Price"]
+                price_data_modified[key] = value
+
+        print len(price_data.keys())
+        print len(price_data_modified.keys())
+
+        return price_data_modified
+
+    # Group price data as up and down
+    # down days are grouped in a dict follows grouped up days
+    def group_history_data_up_down(self, price_data):
+        up = {}
         down = {}
         prev = 0
+        history_up_down = []
 
-        for key, value in sorted(self.data_history_close.items()):
+        for key, value in sorted(price_data.iteritems()):
             if prev == 0:
-                prev = value["Close"]
+                prev = value["Price"]
 
-            if value["Close"] < prev:
+            if value["Price"] < prev:
                 down[key] = value
+                if up:
+                    history_up_down.append(up)
+                    up = {}
             else:
+                up[key] = value
                 if down:
-                    self.data_history_down.append(down)
+                    history_up_down.append(down)
                     down = {}
-            prev = value["Close"]
-
-    def get_data_days_of_down(self):
-        for item in self.data_history_down:
-            if self.data_days_of_down.get(len(item)):
-                self.data_days_of_down[len(item)] += 1
-            else: # if no value yet, put 1
-                self.data_days_of_down[len(item)] = 1
-
-
-    def get_data_dates_of_down(self):
-
-        for item in self.data_history_down:
-            if not self.data_dates_of_down.get(len(item)):
-                self.data_dates_of_down[len(item)] = []
-            self.data_dates_of_down[len(item)].append(item)
+            prev = value["Price"]
             
-        # pprint(self.data_dates_of_down[3])
+        if down:
+            history_up_down.append(down)
+
+        if up:
+            history_up_down.append(up)
+
+        return history_up_down
+
+    def get_data_days_of_down(self, history_up_down, down):
+        days_of_down = {}
+        for item in history_up_down:
+            if down == 0:
+                if item[item.keys()[0]]["Change"] > 0:
+                    continue
+            else:
+                if item[item.keys()[0]]["Change"] < 0:
+                    continue
+
+            if days_of_down.get(len(item)):
+                days_of_down[len(item.keys())] += 1
+            else: # if no value yet, put 1
+                days_of_down[len(item.keys())] = 1
+
+        return days_of_down
+
+
+    def get_data_dates_of_down(self, history_up_down, down):
+        dates_of_down = {}
+
+        for item in history_up_down:
+
+            if down == 0:
+                if item[item.keys()[0]]["Change"] > 0:
+                    continue
+            else:
+                if item[item.keys()[0]]["Change"] < 0:
+                    continue
+
+            if not dates_of_down.get(len(item.keys())):
+                dates_of_down[len(item.keys())] = []
+            dates_of_down[len(item.keys())].append(item)
         
-gspc = yahoo_historical_analysis("^GSPC")
+        return dates_of_down
+
+    # with 3 days down, what is the next up, and what is the drop
+    # after that
+
+    def strategy_3_days(self, history_up_down, start):
+
+        flag_3d = 0
+        flag_u = 0
+        gain = 1
+
+        for item in history_up_down:
+            if (item[item.keys()[0]]["Change"] < 0) and \
+               (len(item.keys()) == 3 or \
+                len(item.keys()) == 4 or \
+                len(item.keys()) == 2):
+                flag_3d = 1
+                print "3 days down"
+                pprint(item)
+            if (item[item.keys()[0]]["Change"] > 0) and \
+               (flag_3d == 1) :
+                flag_3d = 0
+                flag_u = 1
+                print "the following up"
+                pprint(item)
+
+                if item.keys()[0] > start:
+                    for key, value in sorted(item.iteritems()):
+                        gain *= (100 + value["Change"]) / 100
+                    print gain
+
+            if (item[item.keys()[0]]["Change"] < 0) and \
+               (flag_u == 1) :
+                flag_u = 0
+                print "the following down"
+                pprint(item)
+                if item.keys()[0] > start:
+                    gain *= (100 + item[item.keys()[0]]["Change"]) / 100
+                print gain
+
+                
+
 qcom = yahoo_historical_analysis("QCOM")
+gspc = yahoo_historical_analysis("^GSPC")
 
+history_data_rm = gspc.remove_insignificant_change(gspc.data_history_close, 1)
+#pprint(history_data_rm)
 
-gspc.get_data_history_down()
-gspc.get_data_days_of_down()
-gspc.get_data_dates_of_down()
+history_up_down = gspc.group_history_data_up_down(history_data_rm)
+##pprint(history_up_down)
+days_of_down = gspc.get_data_days_of_down(history_up_down, 0)
+pprint(days_of_down)
+days_of_up = gspc.get_data_days_of_down(history_up_down, 1)
+pprint(days_of_up)
 
+dates_of_down = gspc.get_data_dates_of_down(history_up_down, 0)
+dates_of_up = gspc.get_data_dates_of_down(history_up_down, 1)
+# pprint(dates_of_down)
+# pprint(dates_of_up)
+
+gspc.strategy_3_days(history_up_down, "2015-01-01")
 
 print gspc.yahoo.get_price()
 print qcom.yahoo.get_price()
