@@ -202,19 +202,39 @@ class benchmark_and_strategies:
     def benchmark_total_gain(self, start, end):
         total_gain = 1
 
-        for key, value in sorted(self.ticker.data_history_close.items()):
+        #for key, value in sorted(self.ticker.data_history_close.items()):
+        for key, value in sorted(self.history_smooth.items()):
             if key >= start and key <= end:
                 total_gain *= (100 + value["Change"]) / 100
-
+        
         return total_gain
 
     def benchmark_annual_return(self, start, end):
         total_gain = self.benchmark_total_gain(start, end)
+        annual_list = self.__benchmark_year(start, end)
+        accum_gain = 1
+
+        for item in annual_list:
+            annual_gain = self.benchmark_total_gain(*item)
+            accum_gain *= annual_gain
+            print annual_gain, accum_gain
+
+    def __benchmark_year(self, start, end):
+        annual_list = []
+        year_start = datetime.strptime(start, "%Y-%m-%d").year
+        year_end = datetime.strptime(end, "%Y-%m-%d").year
         
-        dates_diff = relativedelta(datetime.strptime(end, "%Y-%m-%d"), \
-                                   datetime.strptime(start, "%Y-%m-%d"))
-        total_years = dates_diff.years
-        print total_years
+        for year in range(year_start, (year_end + 1)):
+            y_first = str(year) + "-01-01"
+            y_last = str(year) + "-12-31"
+            if year == year_start:
+                annual_list.append([start, y_last])
+            elif year == year_end:
+                annual_list.append([y_first, end])
+            else:
+                annual_list.append([y_first, y_last])
+
+        return annual_list
 
     def strategy_3_days(self, start):
 
@@ -258,7 +278,6 @@ class benchmark_and_strategies:
 gspc = benchmark_and_strategies('^GSPC')
 print gspc.benchmark_total_gain("1999-01-01", "2015-11-05")
 print gspc.benchmark_annual_return("1999-01-01", "2015-11-05")
-
 
 #gspc.change_of_today(history_data_rm)
 
