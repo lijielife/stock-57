@@ -18,6 +18,13 @@ class yahoo_historical_analysis:
         self.data_history_close = {}
         self.__update_data_history(ticker, self.start, self.yesterday)
         self.__update_percent_change_of_one_day()
+        self.history_smooth = self.smooth_by_hold(self.data_history_close, 1)
+        self.history_up_down = self.group_history_data_up_down(self.history_smooth)
+        self.history_days_down = self.get_data_days_of_down(self.history_up_down, 0)
+        self.history_days_up = self.get_data_days_of_down(self.history_up_down, 1)
+        self.history_dates_down = self.get_data_dates_of_down(self.history_up_down, 0)
+        self.history_dates_up = self.get_data_dates_of_down(self.history_up_down, 1)
+
 
         description = "Get a stock ticker's historical data from yahoo"
 
@@ -175,22 +182,9 @@ class yahoo_historical_analysis:
         
         return dates_of_down
 
-    # with 3 days down, what is the next up, and what is the drop
-    # after that
-
-
-from dateutil.relativedelta import relativedelta
-
-
 class benchmark_and_strategies:
     def __init__(self, ticker):
         self.ticker = yahoo_historical_analysis(ticker)
-        self.history_smooth = self.ticker.smooth_by_hold(self.ticker.data_history_close, 1)
-        self.history_up_down = self.ticker.group_history_data_up_down(self.history_smooth)
-        self.history_days_down = self.ticker.get_data_days_of_down(self.history_up_down, 0)
-        self.history_days_up = self.ticker.get_data_days_of_down(self.history_up_down, 1)
-        self.history_dates_down = self.ticker.get_data_dates_of_down(self.history_up_down, 0)
-        self.history_dates_up = self.ticker.get_data_dates_of_down(self.history_up_down, 1)
 
     def report_history(self):
         pprint(self.history_days_down)
