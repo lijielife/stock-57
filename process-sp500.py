@@ -193,31 +193,11 @@ class benchmark_and_strategies:
         pprint(self.history_dates_up)
 
 
-    def benchmark_total_gain(self, start, end):
-        total_gain = 1
-
-        #for key, value in sorted(self.ticker.data_history_close.items()):
-        for key, value in sorted(self.history_smooth.items()):
-            if key >= start and key <= end:
-                total_gain *= (100 + value["Change"]) / 100
-        
-        return total_gain
-
-    def benchmark_annual_return(self, start, end):
-        total_gain = self.benchmark_total_gain(start, end)
-        annual_list = self.__benchmark_year(start, end)
-        accum_gain = 1
-
-        for item in annual_list:
-            annual_gain = self.benchmark_total_gain(*item)
-            accum_gain *= annual_gain
-            print annual_gain, accum_gain
-
-    def __benchmark_year(self, start, end):
+    def __calc_year(self, start, end):
         annual_list = []
         year_start = datetime.strptime(start, "%Y-%m-%d").year
         year_end = datetime.strptime(end, "%Y-%m-%d").year
-        
+
         for year in range(year_start, (year_end + 1)):
             y_first = str(year) + "-01-01"
             y_last = str(year) + "-12-31"
@@ -229,6 +209,37 @@ class benchmark_and_strategies:
                 annual_list.append([y_first, y_last])
 
         return annual_list
+
+    def __calc_return(self, price_data, start, end):
+        gain = 0
+
+        for key in sorted(price_data.keys()):
+            if key >= start:
+                break
+        start_price = price_data[key]["Price"]
+
+        for key in reversed(sorted(price_data.keys())):
+            if key <= end:
+                break
+        end_price = price_data[key]["Price"]
+
+        gain = (end_price - start_price ) * 100 / start_price
+
+        return gain
+
+    def calc_benchmark_total_return(self, start, end):
+        return self.__calc_return(self.ticker.data_history_close, start, end)
+
+    def calc_benchmark_annual_return(self, start, end):
+        annual_list = self.__calc_year(start, end)
+        annual_return = []
+
+        for item in annual_list:
+            annual_gain = self.__calc_return(self.ticker.data_history_close, \
+                                             *item)
+            annual_return.append([item, annual_gain])
+
+        return annual_return
 
     def strategy_3_days(self, start):
 
