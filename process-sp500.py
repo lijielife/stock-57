@@ -10,14 +10,18 @@ from yahoo_finance import Share
 class yahoo_historical_analysis:
 
     def __init__(self, ticker):
-        self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).strftime("%Y-%m-%d")
+        self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).\
+                         strftime("%Y-%m-%d")
         self.today = datetime.today().strftime("%Y-%m-%d")
+
         self.start = "1950-01-01"
         self.ticker = ticker
         self.data_history = []
         self.data_history_close = {}
+
         self.__update_data_history(ticker, self.start, self.yesterday)
         self.__update_percent_change_of_one_day()
+
         self.history_smooth = self.smooth_by_hold(self.data_history_close, 1)
         self.history_up_down = self.group_history_data_up_down(self.history_smooth)
         self.history_days_down = self.get_data_days_of_down(self.history_up_down, 0)
@@ -181,6 +185,17 @@ class yahoo_historical_analysis:
             dates_of_down[len(item.keys())].append(item)
         
         return dates_of_down
+
+    def report_history_up_down(self):
+        print "===Report history up down"
+        pprint(self.history_up_down)
+        print "===Report statistics for each down:"
+        pprint(self.history_days_down)
+        pprint(self.history_dates_down)
+        print "===Report statistics for each up:"
+        pprint(self.history_days_up)
+        pprint(self.history_dates_up)
+
 
 class benchmark_and_strategies:
     def __init__(self, ticker):
