@@ -28,7 +28,8 @@ class yahoo_historical_analysis:
         self.history_days_up = self.get_data_days_of_down(self.history_up_down, 1)
         self.history_dates_down = self.get_data_dates_of_down(self.history_up_down, 0)
         self.history_dates_up = self.get_data_dates_of_down(self.history_up_down, 1)
-
+        self.add_probability_of_up_down(self.history_days_down)
+        self.add_probability_of_up_down(self.history_days_up)
 
         description = "Get a stock ticker's historical data from yahoo"
 
@@ -185,6 +186,18 @@ class yahoo_historical_analysis:
             dates_of_down[len(item.keys())].append(item)
         
         return dates_of_down
+
+    def add_probability_of_up_down(self, days_of_change):
+        seq = sorted(days_of_change.keys())
+
+        for i in seq:
+            total = 0
+            index = seq.index(i)
+            for j in seq[index::]:
+                total += float(days_of_change[j])
+            p = (total - days_of_change[i]) / total
+            days_of_change[i] = [days_of_change[i], p]
+        pprint(days_of_change)
 
     def report_history_up_down(self):
         print "===Report history up down"
