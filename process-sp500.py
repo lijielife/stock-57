@@ -200,6 +200,14 @@ class yahoo_historical_analysis:
 class benchmark_and_strategies:
     def __init__(self, ticker):
         self.ticker = yahoo_historical_analysis(ticker)
+        self.s1_long = {3: 10, \
+                        4: 20, \
+                        5: 40, \
+                        6: 80, \
+                        7: 160, \
+                        8: 160, \
+                        9: 160, \
+                        10: 160}
 
     def report_history(self):
         pprint(self.history_days_down)
@@ -256,50 +264,89 @@ class benchmark_and_strategies:
 
         return annual_return
 
-    def strategy_3_days(self, start):
+    def __s1_get_long_positions(self, start, end, days_of_down):
+        list_buy = []
+        long_positions = []
 
-        flag_3d = 0
-        flag_u = 0
-        gain = 1
+        # find dates when price is down for more than 3 days
+        for item in self.ticker.history_up_down:
+            if item[item.keys()[0]]["Change"] < 0 and \
+               len(item.keys()) == days_of_down and \
+               sorted(item.keys())[days_of_down - 1] > start:
+                list_buy.append(item)
 
-        for item in self.history_up_down:
-            if (item[item.keys()[0]]["Change"] < 0) and \
-               (len(item.keys()) == 3 or \
-                len(item.keys()) == 4 or \
-                len(item.keys()) == 2):
-                flag_3d = 1
-                print "3 days down"
+        for item in list_buy:
+            if len(item.keys()) == days_of_down:
                 pprint(item)
-            if (item[item.keys()[0]]["Change"] > 0) and \
-               (flag_3d == 1) :
-                flag_3d = 0
-                flag_u = 1
-                print "the following up"
-                pprint(item)
+                pos = {}
 
-                if item.keys()[0] > start:
-                    for key, value in sorted(item.iteritems()):
-                        gain *= (100 + value["Change"]) / 100
-                    print gain
+                buy_date = sorted(item.keys())[days_of_down -1]
+                buy_price = item[buy_date]["Price"]
+                buy_total = buy_price * self.s1_long[days_of_down]
 
-            if (item[item.keys()[0]]["Change"] < 0) and \
-               (flag_u == 1) :
-                flag_u = 0
-                print "the following down"
-                pprint(item)
-                if item.keys()[0] > start:
-                    gain *= (100 + item[item.keys()[0]]["Change"]) / 100
-                print gain
+                pos["B"] = [buy_date, buy_price, buy_total]
+                long_positions.append(pos)
+
+        return long_positions
+
+    # strategy 1:
+    def backtest_strategy_1(self, start, end):
+        print "Stratege 1"
+
+        price_data = self.ticker.history_smooth
+        strategy_pos = self.__s1_get_long_positions(start, end, 7)
 
 
+        for item in strategy_pos:
+            buy_date = item["B"][0]
+            buy_price = item["B"][1]
+            buy_total = item["B"][2]
 
-# pprint(dates_of_down)
-# pprint(dates_of_up)
+            sell_date = self.backtest_strategy_1_sell(buy_date)
+            if sell_date:
+                sell_price = price_data[sell_date]["Price"]
+                sell_total = sell_price / buy_price * buy_total
+                sell_gain = (sell_price - buy_price) / buy_price * 100
+
+                item["S"] = [sell_date, sell_price, sell_total, sell_gain]
+        pprint(strategy_pos)
+
+    # find sell date a start date
+    # 1. only after an "up"
+    # 2. the first down after that
+    # 3. the total return has to be > 1%
+    def backtest_strategy_1_sell(self, start):
+        price_data = self.ticker.history_smooth
+
+        date = sorted(price_data.keys())
+        init = price_data[start]["Price"]
+        prev = init
+
+        up = 0
+        down = 0
+        sell_date = ""
+
+        for key in date[(date.index(start) + 1)::]:
+            price = price_data[key]["Price"]
+
+            if price < prev:
+                down = 1
+                if up == 1:     # from previous up
+                    if ((price - init) * 100 / init) > 1:
+                        sell_date = key
+                        break
+                up = 0
+            else:
+                down = 0
+                up = 1
+            prev = price
+
+        return sell_date
+
 gspc = benchmark_and_strategies('^GSPC')
-print gspc.benchmark_total_gain("1999-01-01", "2015-11-05")
-print gspc.benchmark_annual_return("1999-01-01", "2015-11-05")
+# gspc.ticker.report_history_up_down()
+gspc.ticker.report_history_up_down()
+print gspc.calc_benchmark_total_return("1999-01-01", "2015-11-05")
+pprint(gspc.calc_benchmark_annual_return("1999-01-01", "2015-11-05"))
 
-#gspc.change_of_today(history_data_rm)
-
-
-#print qcom.yahoo.get_price()
+gspc.backtest_strategy_1("1999-01-01", "2015-11-05")
