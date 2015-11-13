@@ -202,12 +202,12 @@ class yahoo_historical_analysis:
     def report_history_up_down(self):
         print "===Report history up down"
         pprint(self.history_up_down)
-        print "===Report statistics for each down:"
-        pprint(self.history_days_down)
-        pprint(self.history_dates_down)
-        print "===Report statistics for each up:"
-        pprint(self.history_days_up)
-        pprint(self.history_dates_up)
+        # print "===Report statistics for each down:"
+        # pprint(self.history_days_down)
+        # pprint(self.history_dates_down)
+        # print "===Report statistics for each up:"
+        # pprint(self.history_days_up)
+        # pprint(self.history_dates_up)
 
 
 class benchmark_and_strategies:
@@ -228,107 +228,147 @@ class benchmark_and_strategies:
         pprint(self.history_dates_down)
         pprint(self.history_dates_up)
 
+    def __calc_trading_date_start_end(self, dates, start, end):
+        for key in dates:
+            if key >= start:
+                break
+        t_start = key
 
-    def __calc_year(self, start, end):
-        annual_list = []
-        year_start = datetime.strptime(start, "%Y-%m-%d").year
-        year_end = datetime.strptime(end, "%Y-%m-%d").year
+        for key in reversed(dates):
+            if key <= end:
+                break
+        t_end = key
+        
+        return [t_start, t_end]
 
-        for year in range(year_start, (year_end + 1)):
-            y_first = str(year) + "-01-01"
-            y_last = str(year) + "-12-31"
-            if year == year_start:
-                annual_list.append([start, y_last])
-            elif year == year_end:
-                annual_list.append([y_first, end])
+    def __calc_trading_year_start_end(self, dates):
+        year_start_end = {}
+        year_start = dates[0]
+        year_last = datetime.strptime(dates[0], "%Y-%m-%d").year
+
+        for item in dates:
+            year_this = datetime.strptime(item, "%Y-%m-%d").year
+            if year_this != year_last:
+                year_start_end[year_last] = [year_start, year_end]
+                year_last = year_this
+                year_start = item
             else:
-                annual_list.append([y_first, y_last])
+                year_end = item
+        year_start_end[year_this] = [year_start, year_end]
+
+        return year_start_end
+    
+    def __calc_annual_list(self, dates, t_start, t_end):
+        year_start_end = self.__calc_trading_year_start_end(dates)
+        y_start = datetime.strptime(t_start, "%Y-%m-%d").year
+        y_end = datetime.strptime(t_end, "%Y-%m-%d").year
+
+        annual_list = {}
+        if y_start == y_end:
+            annual_list[y_start] = [t_start, t_end]
+        elif y_start > y_end:
+            print "invalid dates!"
+        else:
+            for item in range(y_start, (y_end + 1)):
+                if item == y_start:
+                    annual_list[item] = [t_start, year_start_end[item][1]]
+                elif item == y_end:
+                    annual_list[item] = [year_start_end[item][0], t_end]
+                else:
+                    annual_list[item] = year_start_end[item]
 
         return annual_list
 
-    def __calc_return(self, price_data, start, end):
-        gain = 0
+    def __calc_return(self, price_data, t_start, t_end):
+        start_price = price_data[t_start]["Price"]
+        end_price = price_data[t_end]["Price"]
 
-        for key in sorted(price_data.keys()):
-            if key >= start:
-                break
-        start_price = price_data[key]["Price"]
-
-        for key in reversed(sorted(price_data.keys())):
-            if key <= end:
-                break
-        end_price = price_data[key]["Price"]
-
-        gain = (end_price - start_price ) * 100 / start_price
-
-        return gain
+        return (end_price - start_price ) * 100 / start_price
 
     def calc_benchmark_total_return(self, start, end):
-        return self.__calc_return(self.ticker.data_history_close, start, end)
+        price_data = self.ticker.data_history_close
+        dates = sorted(price_data.keys())
+        t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
+
+        return self.__calc_return(price_data, *t_start_end)
 
     def calc_benchmark_annual_return(self, start, end):
-        annual_list = self.__calc_year(start, end)
-        annual_return = []
+        price_data = self.ticker.data_history_close
+        dates = sorted(price_data.keys())
+        t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
+        annual_list = self.__calc_annual_list(dates, *t_start_end)
 
-        for item in annual_list:
-            annual_gain = self.__calc_return(self.ticker.data_history_close, \
-                                             *item)
-            annual_return.append([item, annual_gain])
+        annual_return = {}
+
+        for key, value in sorted(annual_list.iteritems()):
+            annual_gain = self.__calc_return(price_data, *value)
+            annual_return[key] = annual_gain
 
         return annual_return
 
-    def __s1_get_long_positions(self, start, end, days_of_down):
-        list_buy = []
-        long_positions = []
-
-        # find dates when price is down for more than 3 days
-        for item in self.ticker.history_up_down:
-            if item[item.keys()[0]]["Change"] < 0 and \
-               len(item.keys()) == days_of_down and \
-               sorted(item.keys())[days_of_down - 1] > start:
-                list_buy.append(item)
-
-        for item in list_buy:
-            if len(item.keys()) == days_of_down:
-                pprint(item)
-                pos = {}
-
-                buy_date = sorted(item.keys())[days_of_down -1]
-                buy_price = item[buy_date]["Price"]
-                buy_total = buy_price * self.s1_long[days_of_down]
-
-                pos["B"] = [buy_date, buy_price, buy_total]
-                long_positions.append(pos)
-
-        return long_positions
-
-    # strategy 1:
-    def backtest_strategy_1(self, start, end):
-        print "Stratege 1"
-
+    def calc_strategy_annual_return(self, start, end):
         price_data = self.ticker.history_smooth
-        strategy_pos = self.__s1_get_long_positions(start, end, 7)
+        dates = sorted(price_data.keys())
+        t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
+        list_tran = self.__s1_get_transactions(*t_start_end)
+
+        for item in list_tran:
+            pprint(item)
+            total_gain = self.__calc_return(price_data, *item)
+            print "total=%f" %total_gain
+            annual_list = self.__calc_annual_list(dates, *item)
+            annual_gain = {}
+            pprint(annual_list)
+            for key, value in sorted(annual_list.iteritems()):
+                annual_gain[key] = self.__calc_return(price_data, *value)
+            pprint(annual_gain)
+            print "====="
 
 
-        for item in strategy_pos:
-            buy_date = item["B"][0]
-            buy_price = item["B"][1]
-            buy_total = item["B"][2]
+    # find buy date
+    # only after down dates (more than days_of_down
+    # only the up after that
+    # that up is smaller than the previous down
+    def __s1_get_buy_dates(self, start, end):
+        days_of_down = 2
+        price_data_grouped = self.ticker.history_up_down
+        print "++++"
+        pprint(price_data_grouped)
+        print "++++"
+        list_buy = []
 
-            sell_date = self.backtest_strategy_1_sell(buy_date)
-            if sell_date:
-                sell_price = price_data[sell_date]["Price"]
-                sell_total = sell_price / buy_price * buy_total
-                sell_gain = (sell_price - buy_price) / buy_price * 100
+        # find dates when price is down for more than days_of_down days
+        for item in price_data_grouped:
+            days = sorted(item.keys())
 
-                item["S"] = [sell_date, sell_price, sell_total, sell_gain]
-        pprint(strategy_pos)
+            if item[days[0]]["Change"] < 0 and \
+               len(days) >= days_of_down and \
+               days[days_of_down - 1] >= start:
+                
+                idx = price_data_grouped.index(item)
+                next_item = price_data_grouped[idx + 1]
+                next_item_1st = sorted(next_item.keys())[0]
+                list_buy.append(next_item_1st)
+                # buy_price = next_item[next_item_1st]["Price"]
+                # down_days = len(days)
+                # down_init = item[days[0]]["Price"]
+                # down_last = item[days[len(days) - 1]]["Price"]
+                # down_pctg = (down_last - down_init) * 100 / down_init
+                # up_pctg = next_item[next_item_1st]["Change"]
 
-    # find sell date a start date
+                # # if ads(down_pctg) < 3 and len(days) == 2:
+                # #     continue
+                # list_buy[next_item_1st] = [buy_price, down_days, \
+                #                            down_init, down_pctg, \
+                #                            down_last, up_pctg]
+        return list_buy
+
+    # find sell date by a start date
     # 1. only after an "up"
     # 2. the first down after that
-    # 3. the total return has to be > 1%
-    def backtest_strategy_1_sell(self, start):
+    # 3. the total return has to be > gain
+    def __s1_get_sell_date(self, start):
+        gain = 1
         price_data = self.ticker.history_smooth
 
         date = sorted(price_data.keys())
@@ -345,7 +385,7 @@ class benchmark_and_strategies:
             if price < prev:
                 down = 1
                 if up == 1:     # from previous up
-                    if ((price - init) * 100 / init) > 1:
+                    if ((price - init) * 100 / init) > gain:
                         sell_date = key
                         break
                 up = 0
@@ -356,10 +396,52 @@ class benchmark_and_strategies:
 
         return sell_date
 
-gspc = benchmark_and_strategies('^GSPC')
-# gspc.ticker.report_history_up_down()
-gspc.ticker.report_history_up_down()
-print gspc.calc_benchmark_total_return("1999-01-01", "2015-11-05")
-pprint(gspc.calc_benchmark_annual_return("1999-01-01", "2015-11-05"))
+    def __s1_get_transactions(self, start, end):
+        price_data = self.ticker.history_smooth
+        list_transactions = []
 
-gspc.backtest_strategy_1("1999-01-01", "2015-11-05")
+        list_buy = self.__s1_get_buy_dates(start, end)
+        
+        for item in sorted(list_buy):
+            sell_date = self.__s1_get_sell_date(item)
+            if not sell_date:
+                continue
+
+            list_transactions.append([item, sell_date])
+
+            # sell_price = price_data[sell_date]["Price"]
+            # sell_gain = (sell_price - value[0]) / value[0] * 100
+            # hold_peroid = datetime.strptime(sell_date, "%Y-%m-%d") - \
+            #               datetime.strptime(key, "%Y-%m-%d")
+            # transaction["B"] = [key, value]
+            # transaction["S"] = [sell_date, [sell_price, sell_gain, hold_peroid.days]]
+            # list_transactions.append(transaction)
+
+        return list_transactions
+
+    # def backtest_strategy(self, start, end):
+    #     print "Stratege 1"
+
+    #     price_data = self.ticker.history_smooth
+    #     dates =  sorted(price_data.keys())
+    #     list_buy = self.__s1_get_buy_dates(start, end, 2)
+    #     list_tran = self.__s1_get_transactions(list_buy)
+    #     pprint(list_tran)
+
+    #     for item in list_tran:
+    #         buy_date = item["B"][0]
+    #         buy_amt = item["B"][0][0] * 100
+    #         sell_date = item["S"][0]
+
+backtest_period = ["2005-01-01", "2015-11-08"]
+gspc = benchmark_and_strategies('^GSPC')
+# print gspc.calc_benchmark_total_return(*backtest_period)
+# pprint(gspc.calc_benchmark_annual_return(*backtest_period))
+
+spy = benchmark_and_strategies('SPY')
+# pprint(spy.ticker.report_history_up_down())
+
+#spy.backtest_strategy(*backtest_period)
+pprint(spy.calc_benchmark_annual_return(*backtest_period))
+print spy.calc_benchmark_total_return(*backtest_period)
+print spy.calc_strategy_annual_return(*backtest_period)
