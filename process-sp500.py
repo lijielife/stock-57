@@ -7,40 +7,32 @@ from datetime import datetime
 from pprint import pprint
 from yahoo_finance import Share
 
+# The purpose of this class is to provide ticker's history data
 class yahoo_historical_analysis:
-
     def __init__(self, ticker):
-        self.yesterday = datetime.fromordinal(datetime.today().toordinal()-1).\
-                         strftime("%Y-%m-%d")
-        self.today = datetime.today().strftime("%Y-%m-%d")
+        self.name = ticker
 
-        self.start = "1950-01-01"
-        self.ticker = ticker
-        self.data_history = []
-        self.data_history_close = {}
-
-        self.__update_data_history(ticker, self.start, self.yesterday)
-        self.__update_percent_change_of_one_day()
-
-        self.history_smooth = self.smooth_by_hold(self.data_history_close, 1)
-        self.history_up_down = self.group_history_data_up_down(self.history_smooth)
-        self.history_days_down = self.get_data_days_of_down(self.history_up_down, 0)
-        self.history_days_up = self.get_data_days_of_down(self.history_up_down, 1)
-        self.history_dates_down = self.get_data_dates_of_down(self.history_up_down, 0)
-        self.history_dates_up = self.get_data_dates_of_down(self.history_up_down, 1)
-        self.add_probability_of_up_down(self.history_days_down)
-        self.add_probability_of_up_down(self.history_days_up)
-
-        description = "Get a stock ticker's historical data from yahoo"
-
-    def __update_data_history(self, ticker, start, end):
         self.yahoo = Share(ticker)
+        self.data_history_yahoo = []
+        self.__update_data_history_from_yahoo()
+        self.data_history_close = {}
+        self.__get_history_close_from_yahoo()
+
+        self.__add_daily_percent_change()
+        description = "Get a stock ticker's historical data"
+
+    def __update_data_history_from_yahoo(self):
         data_folder = "./data"
-        data_ticker = data_folder + "/" + ticker + ".txt"
+        data_ticker = data_folder + "/" + self.name + ".txt"
+
+        start = "1950-01-01"
+        end = datetime.fromordinal(datetime.today().toordinal()-1).\
+              strftime("%Y-%m-%d") # yesterday
+        today = datetime.today().strftime("%Y-%m-%d")
 
         # Use ticker as filename to store historical data into a text
         # file. only update the delta up to today
-        print "Update %s historical data..." %ticker
+        print "Update %s historical data..." %self.name
 
         if not os.path.exists(data_folder):
             print "The data folder %s dose not exist!" %data_folder
@@ -48,34 +40,37 @@ class yahoo_historical_analysis:
             os.mkdir(data_folder)
 
         if not os.path.exists(data_ticker):
-            print "Create %s historical data from yahoo..." %ticker
-            self.data_history = self.yahoo.get_historical(start, end)
-            self.data_history.reverse()
-            pickle.dump(self.data_history, open(data_ticker, "wb"))
+            print "Create %s historical data from yahoo..." %self.name
+            self.data_history_yahoo = self.yahoo.get_historical(start, end)
+            self.data_history_yahoo.reverse()
+            pickle.dump(self.data_history_yahoo, open(data_ticker, "wb"))
             return
 
-        self.data_history = pickle.load(open(data_ticker, "rb"))
+        self.data_history_yahoo = pickle.load(open(data_ticker, "rb"))
         
-        if not self.data_history:
+        if not self.data_history_yahoo:
             print "Cannot get history data!"
             return
 
-        prev_date = datetime.strptime(self.data_history[-1]["Date"], "%Y-%m-%d").strftime("%Y-%m-%d")
+        prev_date = datetime.strptime(self.data_history_yahoo[-1]["Date"], \
+            "%Y-%m-%d").strftime("%Y-%m-%d")
 
         if end > prev_date:
-            print "Update %s data from %s to %s" %(ticker, prev_date, end)
+            print "Update %s data from %s to %s" %(self.name, prev_date, end)
             delta_history = self.yahoo.get_historical(prev_date, end)
             delta_history.reverse()
-            self.data_history += delta_history
-            pickle.dump(self.data_history, open(data_ticker, "wb"))
+            self.data_history_yahoo += delta_history
+            pickle.dump(self.data_history_yahoo, open(data_ticker, "wb"))
         else:
             print "Already up-to-date"
 
-        for item in self.data_history:
+    def __get_history_close_from_yahoo(self):
+        for item in self.data_history_yahoo:
             self.data_history_close[item["Date"]] = dict()
-            self.data_history_close[item["Date"]]["Price"] = float(item["Close"])
+            self.data_history_close[item["Date"]]["Price"] = \
+                float(item["Close"])
 
-    def __update_percent_change_of_one_day(self):
+    def __add_daily_percent_change(self):
         prev = 0
         for key, value in sorted(self.data_history_close.items()):
             if prev == 0:
@@ -111,11 +106,12 @@ class yahoo_historical_analysis:
 
         return price_data_modified
 
-    def change_of_today(self, price_data):
+    def get_today_price_from_yahoo(self):
+        price_data = self.data_history_close
         price_today = float(self.yahoo.get_price())
         prev = price_data[sorted(price_data.keys())[-1]]["Price"]
         chg = (price_today - prev) * 100 / prev
-        print "%s price = %f change = %f" %(self.ticker, price_today, chg)
+        print "%s price = %f change = %f" %(self.name, price_today, chg)
         
     # Group price data as up and down
     # down days are grouped in a dict follows grouped up days
@@ -199,9 +195,18 @@ class yahoo_historical_analysis:
             days_of_change[i] = [days_of_change[i], p]
         pprint(days_of_change)
 
-    def report_history_up_down(self):
+    def test(self):
         print "===Report history up down"
-        pprint(self.history_up_down)
+        self.get_today_price_from_yahoo()
+        # self.history_smooth = self.smooth_by_hold(self.data_history_close, 1)
+        # self.history_up_down = self.group_history_data_up_down(self.history_smooth)
+        # self.history_days_down = self.get_data_days_of_down(self.history_up_down, 0)
+        # self.history_days_up = self.get_data_days_of_down(self.history_up_down, 1)
+        # self.history_dates_down = self.get_data_dates_of_down(self.history_up_down, 0)
+        # self.history_dates_up = self.get_data_dates_of_down(self.history_up_down, 1)
+        # self.add_probability_of_up_down(self.history_days_down)
+        # self.add_probability_of_up_down(self.history_days_up)
+
         # print "===Report statistics for each down:"
         # pprint(self.history_days_down)
         # pprint(self.history_dates_down)
@@ -213,14 +218,9 @@ class yahoo_historical_analysis:
 class benchmark_and_strategies:
     def __init__(self, ticker):
         self.ticker = yahoo_historical_analysis(ticker)
-        self.s1_long = {3: 10, \
-                        4: 20, \
-                        5: 40, \
-                        6: 80, \
-                        7: 160, \
-                        8: 160, \
-                        9: 160, \
-                        10: 160}
+        self.fund = {}
+        self.ticker.test()
+        
 
     def report_history(self):
         pprint(self.history_days_down)
@@ -296,8 +296,8 @@ class benchmark_and_strategies:
         price_data = self.ticker.data_history_close
         dates = sorted(price_data.keys())
         t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
-        annual_list = self.__calc_annual_list(dates, *t_start_end)
 
+        annual_list = self.__calc_annual_list(dates, *t_start_end)
         annual_return = {}
 
         for key, value in sorted(annual_list.iteritems()):
@@ -306,71 +306,38 @@ class benchmark_and_strategies:
 
         return annual_return
 
-    def calc_strategy_annual_return(self, start, end):
-        price_data = self.ticker.history_smooth
-        dates = sorted(price_data.keys())
-        t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
-        list_tran = self.__s1_get_transactions(*t_start_end)
+    def __s1_get_buy_dates(self, price_data, start, end):
 
-        for item in list_tran:
-            pprint(item)
-            total_gain = self.__calc_return(price_data, *item)
-            print "total=%f" %total_gain
-            annual_list = self.__calc_annual_list(dates, *item)
-            annual_gain = {}
-            pprint(annual_list)
-            for key, value in sorted(annual_list.iteritems()):
-                annual_gain[key] = self.__calc_return(price_data, *value)
-            pprint(annual_gain)
-            print "====="
-
-
-    # find buy date
-    # only after down dates (more than days_of_down
-    # only the up after that
-    # that up is smaller than the previous down
-    def __s1_get_buy_dates(self, start, end):
         days_of_down = 2
-        price_data_grouped = self.ticker.history_up_down
-        print "++++"
-        pprint(price_data_grouped)
-        print "++++"
+        price_data_grouped = self.ticker.group_history_data_up_down(price_data)
         list_buy = []
 
         # find dates when price is down for more than days_of_down days
         for item in price_data_grouped:
             days = sorted(item.keys())
+            amount = 100
+            buys = {}
 
             if item[days[0]]["Change"] < 0 and \
                len(days) >= days_of_down and \
                days[days_of_down - 1] >= start:
                 
                 idx = price_data_grouped.index(item)
-                next_item = price_data_grouped[idx + 1]
-                next_item_1st = sorted(next_item.keys())[0]
-                list_buy.append(next_item_1st)
-                # buy_price = next_item[next_item_1st]["Price"]
-                # down_days = len(days)
-                # down_init = item[days[0]]["Price"]
-                # down_last = item[days[len(days) - 1]]["Price"]
-                # down_pctg = (down_last - down_init) * 100 / down_init
-                # up_pctg = next_item[next_item_1st]["Change"]
+                next_idx = idx + 1
+                if next_idx < (len(price_data_grouped) - 1):
+                    next_item = price_data_grouped[next_idx]
+                    next_item_1st = sorted(next_item.keys())[0]
+                    # todo: amount algorithm
+                    list_buy.append([next_item_1st, amount])
 
-                # # if ads(down_pctg) < 3 and len(days) == 2:
-                # #     continue
-                # list_buy[next_item_1st] = [buy_price, down_days, \
-                #                            down_init, down_pctg, \
-                #                            down_last, up_pctg]
         return list_buy
 
     # find sell date by a start date
     # 1. only after an "up"
     # 2. the first down after that
     # 3. the total return has to be > gain
-    def __s1_get_sell_date(self, start):
+    def __s1_get_sell_date(self, price_data, start):
         gain = 1
-        price_data = self.ticker.history_smooth
-
         date = sorted(price_data.keys())
         init = price_data[start]["Price"]
         prev = init
@@ -396,52 +363,133 @@ class benchmark_and_strategies:
 
         return sell_date
 
-    def __s1_get_transactions(self, start, end):
-        price_data = self.ticker.history_smooth
+    def __s1_get_transactions(self, price_data, start, end):
         list_transactions = []
-
-        list_buy = self.__s1_get_buy_dates(start, end)
+        list_buy = self.__s1_get_buy_dates(price_data, start, end)
         
         for item in sorted(list_buy):
-            sell_date = self.__s1_get_sell_date(item)
+            sell_date = self.__s1_get_sell_date(price_data, item[0])
+
             if not sell_date:
                 continue
 
             list_transactions.append([item, sell_date])
 
-            # sell_price = price_data[sell_date]["Price"]
-            # sell_gain = (sell_price - value[0]) / value[0] * 100
-            # hold_peroid = datetime.strptime(sell_date, "%Y-%m-%d") - \
-            #               datetime.strptime(key, "%Y-%m-%d")
-            # transaction["B"] = [key, value]
-            # transaction["S"] = [sell_date, [sell_price, sell_gain, hold_peroid.days]]
-            # list_transactions.append(transaction)
-
         return list_transactions
 
-    # def backtest_strategy(self, start, end):
-    #     print "Stratege 1"
 
+    def calc_strategy_annual_return(self, price_data, list_tran, start, end):
+        dates = sorted(price_data.keys())
+        t_start_end =  self.__calc_trading_date_start_end(dates, start, end)
+        list_result = []
+
+        for item in list_tran:
+            total_gain = self.__calc_return(price_data, *item)
+            annual_list = self.__calc_annual_list(dates, *item)
+            annual_gain = {}
+            for key, value in sorted(annual_list.iteritems()):
+                annual_gain[key] = self.__calc_return(price_data, *value)
+            list_result.append([annual_list, annual_gain])
+
+        return list_result
+
+    # def calc_s1_strategy(self, start, end):
     #     price_data = self.ticker.history_smooth
-    #     dates =  sorted(price_data.keys())
-    #     list_buy = self.__s1_get_buy_dates(start, end, 2)
-    #     list_tran = self.__s1_get_transactions(list_buy)
-    #     pprint(list_tran)
+    #     orig_dates = sorted(price_data.keys())
+    #     t_start_end =  self.__calc_trading_date_start_end(orig_dates, start, end)
+    #     list_tran = self.__s1_get_transactions(price_data, *t_start_end)
+        
+    #     dates = orig_dates[orig_dates.index(t_start_end[0]): orig_dates.index(t_start_end[1]):]
+    #     pprint(dates)
 
-    #     for item in list_tran:
-    #         buy_date = item["B"][0]
-    #         buy_amt = item["B"][0][0] * 100
-    #         sell_date = item["S"][0]
+    #     fund = {}
+    #     prev = {}
+    #     prev["Invest"] = 0
+    #     prev["Equity"] = 0
+    #     prev["Liquid"] = 0
 
-backtest_period = ["2005-01-01", "2015-11-08"]
-gspc = benchmark_and_strategies('^GSPC')
+    #     for key in dates:
+    #         current = {}
+
+    #         for item in list_tran:
+    #             date_long = item[0][0]
+    #             unit_long = item[0][1]
+    #             date_sell = item[1]
+
+    #             if key == long_date: # a new position
+    #                 amt_long = unit_long * price_data[date_long]["Price"]
+    #                 if amt_long > prev["Liquid"]:
+    #                     current["Invest"] += amt_long - prev["Liquid"]
+    #                     current["Liquid"] = 0
+    #                 else:
+    #                     current["Liquid"] = prev["Liquid"] - amt_long
+                        
+    #                 current["Equity"] =  prev["Equity"] + unit_long * price_data[key]["Price"]
+    #                 fund[key] = current;
+    #                 prev = current
+    #             elif key == date_sell:
+                    
+
+    #         print key
+    #         pprint(positions)
+
+# position
+# "id": 2015-11-18-spy
+# "ticker": spy
+# "date": 2015-11-18
+# "type": "long"
+# "unit": 100
+
+# "id": 2015-11-18-spy
+# "ticker": spy
+# "date": 2015-11-18
+# "type": "sell"
+# "unit": 100
+
+# class track_fund_and_positions:
+#     def __init__(self):
+#         self.positions = {}
+#         self.fund = {}
+        
+#     def add_position(self, position):
+#         positions.append
+    
+        #     long_amt = amount * price_data[long_date]["Price"] - \
+        #                fund[long_date]["Liquid"]
+
+        #     sell_amt = amount * price_data[sell_date]["Price"]
+        #     idx_long = dates.index(long_date)
+        #     idx_sell = dates.index(sell_date)
+
+        #     for key in dates[idx_long::]:
+        #         if long_amt > 0:
+        #             fund[key]["Invest"] += long_amt
+        #         else:
+        #             fund[key]["Liquid"] += long_amt
+
+        #         if key < sell_date:
+        #             fund[key]["Equity"] += amount * price_data[key]["Price"]
+        #         elif key == sell_date:
+        #             fund[key]["Liquid"] += sell_amt
+        #         else:
+        #             fund[key]["Liquid"] += sell_amt
+
+        # fund["Invest"] = 0
+        # fund["Liquid"] = 0
+        # fund["Equity"] = 0
+        
+backtest_period = ["2015-01-01", "2015-11-08"]
+spy = benchmark_and_strategies('SPY')
+pprint(spy.calc_benchmark_annual_return(*backtest_period))
+print spy.calc_benchmark_total_return(*backtest_period)
+# pprint(spy.calc_s1_strategy(*backtest_period))
+
+
+# pprint(spy.ticker.report_history_up_down())
+#spy.backtest_strategy(*backtest_period)
+#gspc = benchmark_and_strategies('^GSPC')
 # print gspc.calc_benchmark_total_return(*backtest_period)
 # pprint(gspc.calc_benchmark_annual_return(*backtest_period))
 
-spy = benchmark_and_strategies('SPY')
-# pprint(spy.ticker.report_history_up_down())
+    
 
-#spy.backtest_strategy(*backtest_period)
-pprint(spy.calc_benchmark_annual_return(*backtest_period))
-print spy.calc_benchmark_total_return(*backtest_period)
-print spy.calc_strategy_annual_return(*backtest_period)
