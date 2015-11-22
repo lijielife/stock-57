@@ -8,15 +8,16 @@ from yahoo_finance import Share
 from stock_data import historical_stock_data
 
 class spy_strategies:
-    def __init__(self, ticker):
+    def __init__(self, ticker, period):
         self.ticker = historical_stock_data(ticker)
-        self.ticker.test()
+        self.ticker.use_price_data_smoothed_by_percent(1)
+        #self.ticker.use_price_data_original()
+        self.period = period
 
-        self.period = ["2014-01-01", "2015-11-17"]
-        self.date_start = self.ticker.\
-            round_date_to_trading_date_start(self.period[0])
-        self.date_end = self.ticker.\
-            round_date_to_trading_date_end(self.period[1])
+        self.trading_dates = self.ticker.get_trading_dates(*period)
+        self.date_start = self.trading_dates[0]
+        self.date_end = self.trading_dates[-1]
+        
         print self.date_start, self.date_end
 
         self.annual_list = self.ticker.calc_annual_list(\
@@ -29,8 +30,7 @@ class spy_strategies:
         self.price_data_grouped = \
             self.ticker.group_data_up_down(self.date_start, self.date_end)
 
-        pprint(self.get_sell_positions())
-
+        self.positions = []
 
     def __get_long_date(self):
         price_data_grouped = self.price_data_grouped
@@ -38,7 +38,6 @@ class spy_strategies:
         end = self.date_end
 
         days_of_down = 2
-        list_long = []
 
         # find dates when price is down for more than days_of_down days
         for item in price_data_grouped:
@@ -55,12 +54,11 @@ class spy_strategies:
                     next_item = price_data_grouped[next_idx]
                     next_item_1st = sorted(next_item.keys())[0]
                     # todo: amount algorithm
-                    position["start"] = next_item_1st
+                    position["start-date"] = next_item_1st
                     position["type"] = "long"
+                    position["ticker"] = self
 
-                    list_long.append(position)
-
-        return list_long
+                    self.positions.append(position)
 
     # find sell date by a start date
     # 1. only after an "up"
@@ -94,25 +92,28 @@ class spy_strategies:
 
         return sell_date
 
-    def __get_long_amnt(self, date):
+    def __get_pos_unit(self, date):
         return 100
-        
 
-    def get_sell_positions(self):
-        list_long = self.__get_long_date()
-        
-        for item in list_long:
-            close_date = self.__get_sell_date(item["start"])
-            long_amnt = self.__get_long_amnt(item["start"])
+    def __get_pos_price(self, date):
+        return self.ticker.price_data[date]["Price"]
 
+    def get_positions(self):
+        # setup position dates
+        self.__get_long_date()
+
+        for item in self.positions:
+            item["units"] = self.__get_pos_unit(item["start-date"])
+            item["start-price"] = self.__get_pos_price(item["start-date"])
+            close_date = self.__get_sell_date(item["start-date"])
             if not close_date:
                 continue
 
-            item["unit"] = long_amnt
-            item["close"] = close_date
+            item["close-date"] = close_date
+            item["close-price"] = self.__get_pos_price(close_date)
 
-        return list_long
-
+        return self.positions
+        
 
     # def calc_strategy_annual_return(self, price_data, list_tran, start, end):
     #     dates = sorted(price_data.keys())
@@ -215,12 +216,9 @@ class spy_strategies:
         # fund["Equity"] = 0
         
 # backtest_period = ["2015-01-01", "2015-11-08"]
-spy = benchmark_and_strategies('SPY')
 # pprint(spy.calc_benchmark_annual_return(*backtest_period))
 # print spy.calc_benchmark_total_return(*backtest_period)
 # pprint(spy.calc_s1_strategy(*backtest_period))
-
-
 # pprint(spy.ticker.report_history_up_down())
 #spy.backtest_strategy(*backtest_period)
 #gspc = benchmark_and_strategies('^GSPC')
