@@ -150,24 +150,13 @@ class performance:
 
         return price
 
-    # def __get_prev_date(self, date):
-    #     prev_date = None
-
-    #     if date in self.dates:
-    #         idx_date = self.dates.index(date)
-
-    #         if idx_date > 0:
-    #             prev_date = self.dates[idx_date - 1]
-    #         else:
-    #             print "Fund start date %s" % date
-    #     else:
-    #         print "Error: no trading date: %s" % date
-
-    #     return prev_date
-
 period = ["2010-01-01", "2015-11-20"]
 spy = spy_strategies('SPY', period)
 perf = performance()
 perf.add_positions(spy.get_positions())
 perf.get_fund_perf()
-spy.ticker.calc_annual_return(*period)
+
+print "bench mark return"
+
+print spy.ticker.calc_total_return(*period)
+pprint (spy.ticker.calc_annual_return(*period))
