@@ -7,7 +7,7 @@ from pprint import pprint
 from operator import itemgetter
 from yahoo_finance import Share
 from stock_data import historical_stock_data
-from strategies import spy_strategies
+from strategy import spy_strategies
 
 class performance:
     def __init__(self):
