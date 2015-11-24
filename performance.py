@@ -121,14 +121,14 @@ class performance:
         perf = {"invest": 0, "liquid": 0, "equity": 0}
 
         for date in self.dates:
-            fund = self.__get_date_positions(date)
-            self.fund_hist[date] = fund
-            perf = self.__update_perf(fund, perf, date)
-            self.perf_hist[date] = perf
+            self.fund_hist[date] = self.__get_date_positions(date)
+            self.perf_hist[date] = self.__update_perf(self.fund_hist[date],\
+                perf, date)
 
-            print date
-            self.__print_fund(fund)
-            self.__print_perf(perf)
+    def print_perf_fund_history(self):
+        for date in self.dates:
+            self.__print_fund(self.fund_hist[date])
+            self.__print_perf(self.perf_hist[date])
 
     def __print_fund(self, fund):
         if not fund:
@@ -152,12 +152,12 @@ class performance:
 
 period = ["2010-01-01", "2015-11-20"]
 spy_ticker = historical_stock_data("SPY")
-spy = spy_strategy(spy_ticker, period)
+spy_strategy = spy_strategy(spy_ticker, period)
 perf = performance()
-perf.add_positions(spy.get_positions())
+perf.add_positions(spy_strategy.get_positions())
 perf.get_fund_perf()
+perf.print_perf_fund_history()
 
 print "bench mark return"
-
-print spy.ticker.calc_total_return(*period)
-pprint (spy.ticker.calc_annual_return(*period))
+print spy_ticker.calc_total_return(*period)
+pprint (spy_ticker.calc_annual_return(*period))
