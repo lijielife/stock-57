@@ -262,7 +262,7 @@ class historical_stock_data:
 
         return year_start_end
     
-    def calc_annual_list(self, t_start, t_end):
+    def __calc_annual_list(self, t_start, t_end):
         year_start_end = self.__calc_trading_year_start_end()
         y_start = datetime.strptime(t_start, "%Y-%m-%d").year
         y_end = datetime.strptime(t_end, "%Y-%m-%d").year
@@ -283,19 +283,27 @@ class historical_stock_data:
 
         return annual_list
 
-    def calc_total_return(self, t_start, t_end):
+    def __calc_total_return(self, t_start, t_end):
         start_price = self.price_data[t_start]["Price"]
         end_price = self.price_data[t_end]["Price"]
 
         return (end_price - start_price ) * 100 / start_price
 
+    def calc_total_return(self, start, end):
+        t_start = self.round_date_to_trading_date_start(start)
+        t_end = self.round_date_to_trading_date_end(end)
+
+        return self.__calc_total_return(t_start, t_end)
 
     def calc_annual_return(self, start, end):
-        annual_list = self.calc_annual_list(start, end)
+        t_start = self.round_date_to_trading_date_start(start)
+        t_end = self.round_date_to_trading_date_end(end)
+
+        annual_list = self.__calc_annual_list(t_start, t_end)
         annual_return = {}
 
         for key, value in sorted(annual_list.iteritems()):
-            annual_return[key] = self.calc_total_return(*value)
+            annual_return[key] = self.__calc_total_return(*value)
 
         return annual_return
 
