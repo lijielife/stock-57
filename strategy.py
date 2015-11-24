@@ -19,13 +19,6 @@ class spy_strategies:
         self.date_end = self.trading_dates[-1]
         
         print self.date_start, self.date_end
-
-        self.annual_list = self.ticker.calc_annual_list(\
-            self.date_start, self.date_end)
-        pprint(self.annual_list)
-
-        print self.ticker.calc_total_return(self.date_start, self.date_end)
-        print self.ticker.calc_annual_return(self.date_start, self.date_end)
         
         self.price_data_grouped = \
             self.ticker.group_data_up_down(self.date_start, self.date_end)
