@@ -317,26 +317,3 @@ class historical_stock_data:
         self.use_price_data_original()
         self.print_today_price_from_yahoo()
         self.use_price_data_smoothed_by_percent(1)
-
-        # self.history_smooth = self.smooth_by_hold(self.data_history_close, 1)
-        # self.history_up_down = self.group_history_data_up_down(self.history_smooth)
-        # self.history_days_down = self.get_data_days_of_down(self.history_up_down, 0)
-        # self.history_days_up = self.get_data_days_of_down(self.history_up_down, 1)
-        # self.history_dates_down = self.get_data_dates_of_down(self.history_up_down, 0)
-        # self.history_dates_up = self.get_data_dates_of_down(self.history_up_down, 1)
-        # self.add_probability_of_up_down(self.history_days_down)
-        # self.add_probability_of_up_down(self.history_days_up)
-
-        # print "===Report statistics for each down:"
-        # pprint(self.history_days_down)
-        # pprint(self.history_dates_down)
-        # print "===Report statistics for each up:"
-        # pprint(self.history_days_up)
-        # pprint(self.history_dates_up)
-
-        # def report_history(self):
-        #     pprint(self.history_days_down)
-        #     pprint(self.history_days_up)
-        #     pprint(self.history_dates_down)
-        #     pprint(self.history_dates_up)
-
