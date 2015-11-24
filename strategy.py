@@ -7,9 +7,9 @@ from pprint import pprint
 from yahoo_finance import Share
 from stock_data import historical_stock_data
 
-class spy_strategies:
+class spy_strategy:
     def __init__(self, ticker, period):
-        self.ticker = historical_stock_data(ticker)
+        self.ticker = ticker
         self.ticker.use_price_data_smoothed_by_percent(1)
         #self.ticker.use_price_data_original()
         self.period = period

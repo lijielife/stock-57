@@ -7,7 +7,7 @@ from pprint import pprint
 from operator import itemgetter
 from yahoo_finance import Share
 from stock_data import historical_stock_data
-from strategy import spy_strategies
+from strategy import spy_strategy
 
 class performance:
     def __init__(self):
@@ -151,7 +151,8 @@ class performance:
         return price
 
 period = ["2010-01-01", "2015-11-20"]
-spy = spy_strategies('SPY', period)
+spy_ticker = historical_stock_data("SPY")
+spy = spy_strategy(spy_ticker, period)
 perf = performance()
 perf.add_positions(spy.get_positions())
 perf.get_fund_perf()
