@@ -136,6 +136,7 @@ class performance:
 
     def print_perf_fund_history(self):
         for date in self.dates:
+            self.ticker.print_stock_price(date)
             self.__print_fund(self.fund_hist[date])
             self.__print_perf(self.perf_hist[date])
 
