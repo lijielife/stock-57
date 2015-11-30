@@ -69,7 +69,15 @@ class performance:
 
         print "invest %6.2f liquid %6.2f equity %6.2f gain %3.2f" %(\
             item["invest"], item["liquid"], item["equity"], gain)
-    
+
+    def __print_fund(self, fund):
+        if not fund:
+            return
+
+        for key, value in fund.iteritems():
+            print key
+            for item in value:
+                self.__print_position(item)
     
     def __get_date_positions(self, date):
         pos = {}
@@ -131,15 +139,6 @@ class performance:
             self.__print_fund(self.fund_hist[date])
             self.__print_perf(self.perf_hist[date])
 
-    def __print_fund(self, fund):
-        if not fund:
-            return
-
-        for key, value in fund.iteritems():
-            print key
-            for item in value:
-                self.__print_position(item)
-    
     def __get_position_price_of_date(self, date, pos):
 
         if date == pos["start-date"]:
