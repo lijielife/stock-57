@@ -10,7 +10,8 @@ from stock_data import historical_stock_data
 from strategy import spy_strategy
 
 class performance:
-    def __init__(self):
+    def __init__(self, ticker):
+        self.ticker = ticker
         self.positions = []
         self.fund_hist = {}
         self.perf_hist = {}
@@ -22,7 +23,7 @@ class performance:
         for item in self.positions:
             self.__print_position(item)
 
-        dates = self.positions[0]["ticker"].ticker.get_available_trading_dates()
+        dates = self.ticker.get_available_trading_dates()
         self.dates = dates[dates.index(self.positions[0]["start-date"])::]
 
         for item in self.positions:
@@ -37,7 +38,7 @@ class performance:
                        / item["start-price"] * 100
 
             print "symbol:%s type:%s %s %f %s %f gain=%f" \
-                %(item["ticker"].ticker.name, \
+                %(self.ticker.name, \
                   item["type"], 
                   item["start-date"],
                   item["start-price"],
@@ -46,12 +47,12 @@ class performance:
                   gain)
         else:
             today_date = datetime.today().strftime("%Y-%m-%d")
-            today_price = item["ticker"].ticker.get_current_price_from_yahoo()
+            today_price = self.ticker.get_current_price_from_yahoo()
             gain = (today_price - item["start-price"]) \
                    / item["start-price"] * 100
 
             print "symbol:%s type:%s %s %f open:%s %f gain=%s" \
-                %(item["ticker"].ticker.name, \
+                %(self.ticker.name, \
                   item["type"], 
                   item["start-date"],
                   item["start-price"],
@@ -106,7 +107,7 @@ class performance:
 
         if fund.get("hold"):
             for pos in fund["hold"]:
-                hold_amt = pos["units"] * pos["ticker"].ticker.\
+                hold_amt = pos["units"] * self.ticker.\
                     get_stock_price(date)
                 perf["equity"] += hold_amt
         
@@ -146,14 +147,14 @@ class performance:
         elif pos.get("close-date") and date == pos["close-date"]:
             price = pos["close-price"]
         else:
-            price = pos["ticker"].ticker.get_stock_price(date)
+            price = self.ticker.get_stock_price(date)
 
         return price
 
 period = ["2010-01-01", "2015-11-20"]
 spy_ticker = historical_stock_data("SPY")
 spy_strategy = spy_strategy(spy_ticker, period)
-perf = performance()
+perf = performance(spy_ticker)
 perf.add_positions(spy_strategy.get_positions())
 perf.get_fund_perf()
 perf.print_perf_fund_history()
