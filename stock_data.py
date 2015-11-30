@@ -313,6 +313,12 @@ class historical_stock_data:
     def get_stock_price(self, date):
         return self.data_history_close[date]["Price"]
 
+    def print_stock_price(self, date):
+        print "date %s close price %6.2f change %6.2f" %(\
+            date,
+            self.data_history_close[date]["Price"], \
+            self.data_history_close[date]["Change"])
+
     def test(self):
         self.use_price_data_original()
         self.print_today_price_from_yahoo()
