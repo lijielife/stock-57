@@ -10,6 +10,7 @@ from yahoo_finance import Share
 # The purpose of this class is to provide stock ticker's history data
 # and the generic methods to deal with these data
 
+
 class historical_stock_data:
     def __init__(self, ticker):
         self.name = ticker
@@ -31,37 +32,38 @@ class historical_stock_data:
         data_ticker = data_folder + "/" + self.name + ".txt"
 
         start = "1950-01-01"
-        end = datetime.fromordinal(datetime.today().toordinal()-1).\
-              strftime("%Y-%m-%d") # yesterday
+        # yesterday
+        end = datetime.fromordinal(datetime.today().
+                                   toordinal()-1).strftime("%Y-%m-%d")
         today = datetime.today().strftime("%Y-%m-%d")
 
         # Use ticker as filename to store historical data into a text
         # file. only update the delta up to today
-        print "Update %s historical data..." %self.name
+        print "Update %s historical data..." % self.name
 
         if not os.path.exists(data_folder):
-            print "The data folder %s dose not exist!" %data_folder
+            print "The data folder %s dose not exist!" % data_folder
             print "Create %s..." % data_folder
             os.mkdir(data_folder)
 
         if not os.path.exists(data_ticker):
-            print "Create %s historical data from yahoo..." %self.name
+            print "Create %s historical data from yahoo..." % self.name
             self.data_history_yahoo = self.yahoo.get_historical(start, end)
             self.data_history_yahoo.reverse()
             pickle.dump(self.data_history_yahoo, open(data_ticker, "wb"))
             return
 
         self.data_history_yahoo = pickle.load(open(data_ticker, "rb"))
-        
+
         if not self.data_history_yahoo:
             print "Cannot get history data!"
             return
 
-        prev_date = datetime.strptime(self.data_history_yahoo[-1]["Date"], \
-            "%Y-%m-%d").strftime("%Y-%m-%d")
+        prev_date = datetime.strptime(self.data_history_yahoo[-1]["Date"],
+                                      "%Y-%m-%d").strftime("%Y-%m-%d")
 
         if end > prev_date:
-            print "Update %s data from %s to %s" %(self.name, prev_date, end)
+            print "Update %s data from %s to %s" % (self.name, prev_date, end)
             delta_history = self.yahoo.get_historical(prev_date, end)
             delta_history.reverse()
             self.data_history_yahoo += delta_history
@@ -80,46 +82,44 @@ class historical_stock_data:
         for key, value in sorted(self.data_history_close.items()):
             if prev == 0:
                 prev = value["Price"]
-            
+
             value["Change"] = (value["Price"] - prev) * 100 / prev
             prev = value["Price"]
 
     def print_today_price_from_yahoo(self):
-        
         if not self.price_data:
             print "Price data is not available"
             return
-        
+
         price_today = float(self.yahoo.get_price())
         prev = self.price_data[sorted(self.price_data.keys())[-1]]["Price"]
         chg = (price_today - prev) * 100 / prev
-        print "%s price = %f change = %f" %(self.name, price_today, chg)
+        print "%s price = %f change = %f" % (self.name, price_today, chg)
 
     def get_current_price_from_yahoo(self):
         return float(self.yahoo.get_price())
-    
+
     def use_price_data_original(self):
         self.price_data = self.data_history_close
         self.dates = sorted(self.price_data.keys())
 
         print "Use original price data"
 
-
     # Remove the days that don't have significant changes in terms of
-    # a threshold. 
+    # a threshold.
     # 1. if day 2 has a change less than < threshold, day 2 will be discarsed
     # 2. day 3's change will be updated to a new percentage relative to day 1
     # 3. if day 3 has a change less than < threshold, day 3 will be discarsed
-    # 4. This process will go on 
+    # 4. This process will go on
     def use_price_data_smoothed_by_percent(self, threshold):
         price_data = self.data_history_close
         prev = 0
         price_data_modified = {}
-        
+
         for key, value in sorted(price_data.iteritems()):
             if prev == 0:
                 prev = value["Price"]
-                price_data_modified[key] = value;
+                price_data_modified[key] = value
 
             chg = (value["Price"] - prev) * 100 / prev
 
@@ -162,7 +162,7 @@ class historical_stock_data:
                     history_up_down.append(down)
                     down = {}
             prev = value["Price"]
-    
+
         # take care of the last item
         if down:
             history_up_down.append(down)
@@ -171,7 +171,6 @@ class historical_stock_data:
             history_up_down.append(up)
 
         return history_up_down
-    
 
     def get_data_days_of_down(self, history_up_down, down):
         days_of_down = {}
@@ -185,11 +184,10 @@ class historical_stock_data:
 
             if days_of_down.get(len(item)):
                 days_of_down[len(item.keys())] += 1
-            else: # if no value yet, put 1
+            else:
                 days_of_down[len(item.keys())] = 1
 
         return days_of_down
-
 
     def get_data_dates_of_down(self, history_up_down, down):
         dates_of_down = {}
@@ -206,7 +204,7 @@ class historical_stock_data:
             if not dates_of_down.get(len(item.keys())):
                 dates_of_down[len(item.keys())] = []
             dates_of_down[len(item.keys())].append(item)
-        
+
         return dates_of_down
 
     def add_probability_of_up_down(self, days_of_change):
@@ -241,7 +239,7 @@ class historical_stock_data:
         for item in self.dates:
             if item >= start and item <= end:
                 trading_dates.append(item)
-        
+
         return trading_dates
 
     def __calc_trading_year_start_end(self):
@@ -261,7 +259,7 @@ class historical_stock_data:
         year_start_end[year_this] = [year_start, year_end]
 
         return year_start_end
-    
+
     def __calc_annual_list(self, t_start, t_end):
         year_start_end = self.__calc_trading_year_start_end()
         y_start = datetime.strptime(t_start, "%Y-%m-%d").year
@@ -287,7 +285,7 @@ class historical_stock_data:
         start_price = self.price_data[t_start]["Price"]
         end_price = self.price_data[t_end]["Price"]
 
-        return (end_price - start_price ) * 100 / start_price
+        return (end_price - start_price) * 100 / start_price
 
     def calc_total_return(self, start, end):
         t_start = self.round_date_to_trading_date_start(start)
@@ -314,9 +312,9 @@ class historical_stock_data:
         return self.data_history_close[date]["Price"]
 
     def print_stock_price(self, date):
-        print "date %s close price %6.2f change %6.2f" %(\
+        print "date %s close price %6.2f change %6.2f" % (
             date,
-            self.data_history_close[date]["Price"], \
+            self.data_history_close[date]["Price"],
             self.data_history_close[date]["Change"])
 
     def test(self):
