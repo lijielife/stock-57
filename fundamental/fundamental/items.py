@@ -9,6 +9,8 @@ import scrapy
 
 
 class FundamentalItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
+    symbol = scrapy.Field()
+    cik = scrapy.Field()
+    revenue = scrapy.Field()
+
     pass
