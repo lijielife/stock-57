@@ -7,6 +7,7 @@ from scrapy.item import Item, Field
 from scrapy.contrib.loader.processor import Compose, MapCompose, TakeFirst
 
 import locale
+from dateutil.parser import parse
 
 class YahooFinancialSpider(sp.Spider):
     name = "yahoo-financial"
@@ -27,7 +28,7 @@ class FinancialItem(sp.Item):
     net_income = Field()
 
 class FinancialItemLoader(ItemLoader):
-    period_in = MapCompose(unicode.strip, unicode.upper)
+    period_in = MapCompose(unicode.strip, parse)
 
     total_revenue_in = MapCompose(unicode.strip, locale.atoi)
 
