@@ -6,6 +6,7 @@ from scrapy.loader import ItemLoader
 from scrapy.item import Item, Field
 from scrapy.contrib.loader.processor import Compose, MapCompose, TakeFirst
 
+import locale
 
 class YahooFinancialSpider(sp.Spider):
     name = "yahoo-financial"
@@ -26,8 +27,16 @@ class FinancialItem(sp.Item):
     net_income = Field()
 
 class FinancialItemLoader(ItemLoader):
-    # default_item_class = FinancialItem
-    # default_output_processor = TakeFirst()
+    period_in = MapCompose(unicode.strip, unicode.upper)
+
+    total_revenue_in = MapCompose(unicode.strip, locale.atoi)
+
+    gross_profit_in = MapCompose(unicode.strip, locale.atoi)
+
+    ebit_in = MapCompose(unicode.strip, locale.atoi)
+
+    net_income_in = MapCompose(unicode.strip, locale.atoi)
+
 
     def __init__(self, *args, **kwargs):
         response = kwargs.get('response')
@@ -60,6 +69,8 @@ class FinancialItemLoader(ItemLoader):
             '[contains(., "Net Income Applicable To Common Shares")]'
             ']/following-sibling::*/strong/text()'
         )
+
+        locale.setlocale(locale.LC_ALL, '')
 
         self.add_xpath('period', xpath_period)
         self.add_xpath('total_revenue', xpath_total_revenue)
