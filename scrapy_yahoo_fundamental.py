@@ -9,11 +9,14 @@ from scrapy.contrib.loader.processor import Compose, MapCompose, TakeFirst
 import locale
 from dateutil.parser import parse
 
+import re
+
+
 class YahooFinancialSpider(sp.Spider):
     name = "yahoo-financial"
     allowed_domains = ["yahoo.com"]
     
-    start_urls = ["http://finance.yahoo.com/q/is?s=QCOM"]
+    start_urls = ["http://finance.yahoo.com/q/is?s=AMZN"]
     
     def parse(self, response):
         l = FinancialItemLoader(item=FinancialItem(), response=response)
@@ -27,16 +30,19 @@ class FinancialItem(sp.Item):
     ebit = Field()
     net_income = Field()
 
+def convert_str_to_int(x):
+    return locale.atoi(re.sub('^\((.*?)\)', r'-\1', x))
+
 class FinancialItemLoader(ItemLoader):
     period_in = MapCompose(unicode.strip, parse)
 
-    total_revenue_in = MapCompose(unicode.strip, locale.atoi)
+    total_revenue_in = MapCompose(unicode.strip, convert_str_to_int)
 
-    gross_profit_in = MapCompose(unicode.strip, locale.atoi)
+    gross_profit_in = MapCompose(unicode.strip, convert_str_to_int)
 
-    ebit_in = MapCompose(unicode.strip, locale.atoi)
+    ebit_in = MapCompose(unicode.strip, convert_str_to_int)
 
-    net_income_in = MapCompose(unicode.strip, locale.atoi)
+    net_income_in = MapCompose(unicode.strip, convert_str_to_int)
 
 
     def __init__(self, *args, **kwargs):
