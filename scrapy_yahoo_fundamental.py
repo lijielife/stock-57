@@ -4,6 +4,8 @@ import scrapy as sp
 from scrapy.crawler import CrawlerProcess
 from scrapy.loader import ItemLoader
 from scrapy.item import Item, Field
+from scrapy.contrib.loader.processor import Compose, MapCompose, TakeFirst
+
 
 class YahooFinancialSpider(sp.Spider):
     name = "yahoo-financial"
@@ -12,21 +14,58 @@ class YahooFinancialSpider(sp.Spider):
     start_urls = ["http://finance.yahoo.com/q/is?s=QCOM"]
     
     def parse(self, response):
-        l = ItemLoader(item=FinancialItem(), response=response)
-        l.add_xpath('date', '//tr/td[./small/span[contains(., "Period Ending")]]/following-sibling::*/text()')
-        l.add_xpath('total_revenue', '//tr/td[./strong[contains(., "Total Revenue")]]/following-sibling::*/strong/text()')
-        l.add_xpath('gross_profit', '//tr/td[./strong[contains(., "Gross Profit")]]/following-sibling::*/strong/text()')
-        l.add_xpath('ebit', '//tr/td[contains(., "Earnings Before Interest And Taxes")]/following-sibling::*/text()')
-        l.add_xpath('net_income', '//tr/td[./strong[contains(., "Net Income Applicable To Common Shares")]]/following-sibling::*/strong/text()')
+        l = FinancialItemLoader(item=FinancialItem(), response=response)
         print l.load_item()
 
 class FinancialItem(sp.Item):
     symbol = Field()
-    date = Field()
+    period = Field()
     total_revenue = Field()
     gross_profit = Field()
     ebit = Field()
     net_income = Field()
+
+class FinancialItemLoader(ItemLoader):
+    # default_item_class = FinancialItem
+    # default_output_processor = TakeFirst()
+
+    def __init__(self, *args, **kwargs):
+        response = kwargs.get('response')
+        item = kwargs.get('item')
+
+        super(FinancialItemLoader, self).__init__(*args, **kwargs)
+
+        xpath_period = (
+            '//tr/td[./small/span'
+            '[contains(., "Period Ending")]'
+            ']/following-sibling::*/text()'
+        )
+        xpath_total_revenue = (
+            '//tr/td[./strong'
+            '[contains(., "Total Revenue")]'
+            ']/following-sibling::*/strong/text()'
+        )
+        xpath_gross_profit = (
+            '//tr/td[./strong'
+            '[contains(., "Gross Profit")]'
+            ']/following-sibling::*/strong/text()'
+        )
+        xpath_ebit = (
+            '//tr/td'
+            '[contains(., "Earnings Before Interest And Taxes")'
+            ']/following-sibling::*/text()'
+        )
+        xpath_net_income = (
+            '//tr/td[./strong'
+            '[contains(., "Net Income Applicable To Common Shares")]'
+            ']/following-sibling::*/strong/text()'
+        )
+
+        self.add_xpath('period', xpath_period)
+        self.add_xpath('total_revenue', xpath_total_revenue)
+        self.add_xpath('gross_profit', xpath_gross_profit)
+        self.add_xpath('ebit', xpath_ebit)
+        self.add_xpath('net_income', xpath_net_income)
 
 def main():
      process = CrawlerProcess({
