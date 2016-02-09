@@ -33,6 +33,8 @@ class stock_price:
             else:
                 start = default_start
 
+        print start
+
         diff = dt.datetime.today() - start
         if diff.days > 1:
             price = pr.DataReader(self.ticker, "yahoo", start=start)
@@ -60,7 +62,8 @@ def main():
     folder = cmd_line[1]
     stfile = folder + '/' + default_file
     price = stock_price(symbol)
+    print stfile
     price.store_data(stfile)
-
+    
 if __name__ == "__main__":
     main()
