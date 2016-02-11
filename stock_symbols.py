@@ -26,6 +26,25 @@ def read_symbols(csv_files):
 
     return symbols
 
+def store_symbols(data_dir, symbols):
+    store = pd.HDFStore(data_dir + '/symbols.h5')
+    symbol_node = '/symbols'
+
+    if store.get_storer(symbol_node) == None:
+        store.append(symbol_node, symbols)
+    else:
+        print '/symbols exists'
+
+    sector_node = '/sectors'
+    if store.get_storer(sector_node) == None:
+        sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
+        sectors.index=range(0, len(sectors))
+        store['/sectors'] = sectors
+    else:
+        print '/sectors exists'
+
+    store.close()
+
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock symbols')
     parser.add_argument("data_dir")
@@ -41,6 +60,7 @@ def main():
     data_dir = get_cmd_line()
     csv_files = download_symbols(data_dir)
     symbols = read_symbols(csv_files)
+    store_symbols(data_dir, symbols)
 
 if __name__ == "__main__":
     main()
