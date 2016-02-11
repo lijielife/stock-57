@@ -2,6 +2,15 @@
 
 import os
 import argparse as ap
+import wget
+
+def download_symbols(data_dir):
+    url = ('http://www.nasdaq.com/screening/companies-by-industry.aspx?'
+            'exchange=%s&render=download')
+    markets = ['NYSE', 'NASDAQ', 'AMEX']
+
+    csvs = [wget.download((url % x), out=data_dir + '/' + x + '.csv')
+                for x in markets]
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock symbols')
@@ -16,7 +25,8 @@ def get_cmd_line():
 
 def main():
     data_dir = get_cmd_line()
-    
+    download_symbols(data_dir)
+
 if __name__ == "__main__":
     main()
 
