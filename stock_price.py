@@ -51,7 +51,7 @@ def get_cmd_line():
     cmd_args = parser.parse_args()
     data_dir = os.path.abspath(cmd_args.data_dir)
     if not os.path.exists(data_dir):
-        print "%s does not exist!" % src_dir
+        print "%s does not exist!" % data_dir
         sys.exit()
 
     return [cmd_args.stock_symbol, data_dir]
