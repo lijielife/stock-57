@@ -12,6 +12,7 @@ def download_symbols(data_dir):
     markets = ['NYSE', 'NASDAQ', 'AMEX']
     csv_files = [wget.download((url % x), out=data_dir + '/' + x + '.csv')
                 for x in markets]
+    print 'symbols downloaded'
 
     return csv_files
 
@@ -28,10 +29,10 @@ def read_symbols(csv_files):
 
 def store_symbols(data_dir, symbols):
     store = pd.HDFStore(data_dir + '/symbols.h5')
-    symbol_node = '/symbols'
 
+    symbol_node = '/symbols'
     if store.get_storer(symbol_node) == None:
-        store.append(symbol_node, symbols)
+        store[symbol_node] = symbols
     else:
         print '/symbols exists'
 
@@ -39,7 +40,7 @@ def store_symbols(data_dir, symbols):
     if store.get_storer(sector_node) == None:
         sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
         sectors.index=range(0, len(sectors))
-        store['/sectors'] = sectors
+        store[sector_node] = sectors
     else:
         print '/sectors exists'
 
