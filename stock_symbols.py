@@ -32,7 +32,7 @@ def store_symbols(data_dir, symbols):
 
     symbol_node = '/symbols'
     if store.get_storer(symbol_node) == None:
-        store[symbol_node] = symbols
+        store.append(symbol_node, symbols, data_columns=True)
     else:
         print '/symbols exists'
 
@@ -40,7 +40,7 @@ def store_symbols(data_dir, symbols):
     if store.get_storer(sector_node) == None:
         sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
         sectors.index=range(0, len(sectors))
-        store[sector_node] = sectors
+        store.append(sector_node, sectors, data_columns=True)
     else:
         print '/sectors exists'
 
