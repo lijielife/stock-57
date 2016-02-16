@@ -52,7 +52,7 @@ abbrev_statement = {
     'EBITDA': 'ebitda'
 }
 
-def start_firefox_webdriver():
+def start_firefox_webdriver(profile_folder):
     profile = webdriver.FirefoxProfile(profile_folder)
     driver = webdriver.Firefox(firefox_profile=profile)
 
@@ -159,8 +159,7 @@ def main():
                        '%s %s.csv' %(symbol, csv_filename['income']))
     url = url_morningstar %(url_statement['income'], symbol)
 
-    driver = start_firefox_webdriver()
-
+    driver = start_firefox_webdriver(profile_folder)
     store = pd.HDFStore(data_dir + '/financials.h5')
     download_financial_morningstar(symbol, driver, url, store, csv)
     store.close()
