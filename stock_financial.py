@@ -8,11 +8,8 @@ from selenium.webdriver.support.ui import WebDriverWait
 from retrying import retry
 
 profile_folder = '/home/yangh/.mozilla/firefox/webdriver-profile'
-def start_firefox_webdriver():
-    profile = webdriver.FirefoxProfile(profile_folder)
-    driver = webdriver.Firefox(firefox_profile=profile)
-    
-    return driver
+
+freq = ['Quarterly', 'Annual']
 
 abbrev_statement = {
     'Revenue': 'revenue',
@@ -39,8 +36,11 @@ abbrev_statement = {
     'EBITDA': 'ebitda'
 }
 
-def abbrev_income(column_list):
-    print column_list
+def start_firefox_webdriver():
+    profile = webdriver.FirefoxProfile(profile_folder)
+    driver = webdriver.Firefox(firefox_profile=profile)
+
+    return driver
 
 def transpose_statement(statement):
     cols = statement.columns.tolist()
@@ -125,8 +125,8 @@ def download_financial_morningstar(symbol, driver, store, data_dir):
     is_csv = os.path.join(data_dir, '%s Income Statement.csv' %symbol)
 
     driver.get(url)
-    download_and_store_income(symbol, driver, 'Quarterly', is_csv, store)
-    download_and_store_income(symbol, driver, 'Annual', is_csv, store)
+    for f in freq:
+        download_and_store_income(symbol, driver, f, is_csv, store)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
