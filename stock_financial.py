@@ -18,11 +18,11 @@ abbrev_statement = {
     'Revenue': 'revenue',
     'Cost of revenue': 'cost',
     'Gross profit': 'profit',
-    'Research and development': 'R&D',
-    'Sales, General and administrative': 'SG&A',
-    'Other operating expenses': 'expense_op_other',
-    'Total operating expenses': 'expense_op_total',
-    'Operating income': 'income_op',
+    'Research and development': 'RD',
+    'Sales, General and administrative': 'SGA',
+    'Other operating expenses': 'op_expense_other',
+    'Total operating expenses': 'op_expense_total',
+    'Operating income': 'op_income',
     'Interest Expense': 'expense_int',
     'Other income (expense)': 'income_other',
     'Income before taxes': 'income_before_tax',
@@ -89,7 +89,7 @@ def merge_income_items(income):
 
     income.columns = [abbrev_statement[x] for x in cols]
 
-def download_financial_morningstar(symbol, driver, data_dir):
+def download_financial_morningstar(symbol, driver, store, data_dir):
 
     # Income statement
     url = ('http://financials.morningstar.com/income-statement/is.html?'
@@ -114,6 +114,10 @@ def download_financial_morningstar(symbol, driver, data_dir):
 
     merge_income_items(income)
 
+    income_node = '/quarterly/income/' + symbol
+    if store.get_storer(income_node) == None:
+        store.append(income_node, income, data_columns=True)
+
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
     parser.add_argument("data_dir")
@@ -128,8 +132,9 @@ def get_cmd_line():
 def main():
     data_dir = get_cmd_line()
     driver = start_firefox_webdriver()
-    download_financial_morningstar('QCOM', driver, data_dir)
-
+    store = pd.HDFStore(data_dir + '/financials.h5')
+    download_financial_morningstar('QCOM', driver, store, data_dir)
+    store.close()
 if __name__ == "__main__":
     main()
 
