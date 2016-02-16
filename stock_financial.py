@@ -26,7 +26,6 @@ csv_filename = {
 
 freq = ['Quarterly', 'Annual']
 
-
 abbrev_statement = {
     'Revenue': 'revenue',
     'Cost of revenue': 'cost',
@@ -82,7 +81,7 @@ def transpose_statement(statement):
 # 'Weighted average shares outstanding Basic': 'shares_basic',
 # 'Weighted average shares outstanding Diluted': 'shares_diluted',
 
-def merge_income_items(income):
+def merge_items_income(income):
     cols = income.columns.tolist()
 
     idx = cols.index('Operating expenses')
@@ -117,29 +116,30 @@ def download_morningstar(driver, freq):
     driver.execute_script("SRT_stocFund.changeDataType('R','Restated')")
     driver.execute_script("SRT_stocFund.Export()")
 
-def store_income(is_csv, store, h5_node):
+def store_statement(st_type, csv, store, h5_node):
     @retry(wait_fixed=200, stop_max_delay=10000)
-    def read_csv(is_csv):
-        return pd.read_csv(is_csv, skiprows=1)
+    def read_csv(csv):
+        return pd.read_csv(csv, skiprows=1)
 
-    income = transpose_statement(read_csv(is_csv))
+    statement = transpose_statement(read_csv(csv))
 
-    merge_income_items(income)
+    if st_type = 'income':
+        merge_items_income(statement)
 
     if store.get_storer(h5_node) == None:
-        store.append(h5_node, income, data_columns=True)
+        store.append(h5_node, statement, data_columns=True)
 
-    os.remove(is_csv)
+    os.remove(csv)
 
-def download_and_store_income(symbol, driver, freq, is_csv, store):
+def download_and_store(symbol, st_type, driver, freq, csv, store):
     download_morningstar(driver, freq)
-    h5_node = '/income/' + freq + '/' + symbol
-    store_income(is_csv, store, h5_node)
+    h5_node = '/' + st_type + '/' + freq + '/' + symbol
+    store_statement(st_type, csv, store, h5_node)
 
-def download_financial_morningstar(symbol, driver, url, store, csv):
+def download_financial_morningstar(symbol, st_type, driver, url, store, csv):
     driver.get(url)
     for f in freq:
-        download_and_store_income(symbol, driver, f, csv, store)
+        download_and_store(symbol, st_type, driver, f, csv, store)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
@@ -155,13 +155,13 @@ def get_cmd_line():
 def main():
     data_dir = get_cmd_line()
     symbol = 'QCOM'
-    csv = os.path.join(data_dir,
-                       '%s %s.csv' %(symbol, csv_filename['income']))
-    url = url_morningstar %(url_statement['income'], symbol)
-
+    st_type = 'income'
     driver = start_firefox_webdriver(profile_folder)
     store = pd.HDFStore(data_dir + '/financials.h5')
-    download_financial_morningstar(symbol, driver, url, store, csv)
+    csv = os.path.join(data_dir,
+                       '%s %s.csv' %(symbol, csv_filename[st_type]))
+    url = url_morningstar %(url_statement[st_type], symbol)
+    download_financial_morningstar(symbol, st_type, driver, url, store, csv)
     store.close()
 
 if __name__ == "__main__":
