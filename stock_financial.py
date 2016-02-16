@@ -111,8 +111,7 @@ def download_morningstar(driver, freq):
     elif freq == 'Annual':
         driver.execute_script("SRT_stocFund.ChangeFreq(12,'Annual')")
     driver.execute_script("SRT_stocFund.orderControl('asc','Ascending')")
-    # in thousands
-    driver.execute_script("SRT_stocFund.ChangeRounding(-1)")
+    driver.execute_script("SRT_stocFund.ChangeRounding(-1)") # in thousand
     driver.execute_script("SRT_stocFund.changeDataType('R','Restated')")
     driver.execute_script("SRT_stocFund.Export()")
 
@@ -123,7 +122,7 @@ def store_statement(st_type, csv, store, h5_node):
 
     statement = transpose_statement(read_csv(csv))
 
-    if st_type = 'income':
+    if st_type == 'income':
         merge_items_income(statement)
 
     if store.get_storer(h5_node) == None:
@@ -131,15 +130,12 @@ def store_statement(st_type, csv, store, h5_node):
 
     os.remove(csv)
 
-def download_and_store(symbol, st_type, driver, freq, csv, store):
-    download_morningstar(driver, freq)
-    h5_node = '/' + st_type + '/' + freq + '/' + symbol
-    store_statement(st_type, csv, store, h5_node)
-
 def download_financial_morningstar(symbol, st_type, driver, url, store, csv):
     driver.get(url)
     for f in freq:
-        download_and_store(symbol, st_type, driver, f, csv, store)
+        download_morningstar(driver, f)
+        h5_node = '/' + st_type + '/' + f + '/' + symbol
+        store_statement(st_type, csv, store, h5_node)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
