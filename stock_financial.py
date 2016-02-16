@@ -14,8 +14,7 @@ def start_firefox_webdriver():
     
     return driver
 
-
-abbrev_income_statement = {
+abbrev_statement = {
     'Revenue': 'revenue',
     'Cost of revenue': 'cost',
     'Gross profit': 'profit',
@@ -51,6 +50,45 @@ def transpose_statement(statement):
 
     return statement.transpose()
 
+# Remove 'Operating expenses' since no data in it
+# Merge below 3 items
+# 'Earnings per share'
+# 'Basic'
+# 'Diluted'
+# to:
+# 'Earnings per share Basic'
+# 'Earnings per share Diluted'
+# Merge below 3 items
+# 'Weighted average shares outstanding
+# 'Basic'
+# 'Diluted'
+# to:
+# 'Weighted average shares outstanding Basic': 'shares_basic',
+# 'Weighted average shares outstanding Diluted': 'shares_diluted',
+
+def merge_income_items(income):
+    cols = income.columns.tolist()
+
+    idx = cols.index('Operating expenses')
+    cols.pop(idx)
+
+    idx = cols.index('Earnings per share')
+    cols.pop(idx)
+    cols[idx] = 'Earnings per share Basic'
+    cols[idx + 1] = 'Earnings per share Diluted'
+
+    idx = cols.index('Weighted average shares outstanding')
+    cols.pop(idx)
+    cols[idx] = 'Weighted average shares outstanding Basic'
+    cols[idx + 1] = 'Weighted average shares outstanding Diluted'
+
+    income.drop(['Operating expenses',
+                 'Earnings per share',
+                 'Weighted average shares outstanding',
+                 ], axis=1, inplace=True)
+
+    income.columns = [abbrev_statement[x] for x in cols]
+
 def download_financial_morningstar(symbol, driver, data_dir):
 
     # Income statement
@@ -74,7 +112,7 @@ def download_financial_morningstar(symbol, driver, data_dir):
 
     income = transpose_statement(read_csv(is_csv))
 
-    print income.columns
+    merge_income_items(income)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
