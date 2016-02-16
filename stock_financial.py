@@ -9,7 +9,23 @@ from retrying import retry
 
 profile_folder = '/home/yangh/.mozilla/firefox/webdriver-profile'
 
+url_morningstar = ('http://financials.morningstar.com/%s.html?'
+                   't=%s&region=USA&culture=en_US')
+
+url_statement = {
+    'income': 'income-statement/is',
+    'balance_sheet': 'balance-sheet/bs',
+    'cash_flow': 'cash-flow/cf'
+}
+
+csv_filename = {
+    'income': 'Income Statement',
+    'balance_sheet': 'Balance Sheet',
+    'cash_flow': 'Cash Flow'
+}
+
 freq = ['Quarterly', 'Annual']
+
 
 abbrev_statement = {
     'Revenue': 'revenue',
@@ -85,6 +101,7 @@ def merge_income_items(income):
     income.drop(['Operating expenses',
                  'Earnings per share',
                  'Weighted average shares outstanding',
+                 'TTM'
                  ], axis=1, inplace=True)
 
     income.columns = [abbrev_statement[x] for x in cols]
@@ -119,14 +136,10 @@ def download_and_store_income(symbol, driver, freq, is_csv, store):
     h5_node = '/income/' + freq + '/' + symbol
     store_income(is_csv, store, h5_node)
 
-def download_financial_morningstar(symbol, driver, store, data_dir):
-    url = ('http://financials.morningstar.com/income-statement/is.html?'
-           't=%s&region=USA&culture=en_US') % symbol
-    is_csv = os.path.join(data_dir, '%s Income Statement.csv' %symbol)
-
+def download_financial_morningstar(symbol, driver, url, store, csv):
     driver.get(url)
     for f in freq:
-        download_and_store_income(symbol, driver, f, is_csv, store)
+        download_and_store_income(symbol, driver, f, csv, store)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
@@ -141,9 +154,15 @@ def get_cmd_line():
 
 def main():
     data_dir = get_cmd_line()
+    symbol = 'QCOM'
+    csv = os.path.join(data_dir,
+                       '%s %s.csv' %(symbol, csv_filename['income']))
+    url = url_morningstar %(url_statement['income'], symbol)
+
     driver = start_firefox_webdriver()
+
     store = pd.HDFStore(data_dir + '/financials.h5')
-    download_financial_morningstar('QCOM', driver, store, data_dir)
+    download_financial_morningstar(symbol, driver, url, store, csv)
     store.close()
 
 if __name__ == "__main__":
