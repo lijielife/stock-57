@@ -44,9 +44,9 @@ def abbrev_income(column_list):
 
 def transpose_statement(statement):
     cols = statement.columns.tolist()
-    cols[0] = 'quarter'
+    cols[0] = 'report'
     statement.columns = cols
-    statement.set_index('quarter', inplace=True)
+    statement.set_index('report', inplace=True)
 
     return statement.transpose()
 
@@ -89,23 +89,18 @@ def merge_income_items(income):
 
     income.columns = [abbrev_statement[x] for x in cols]
 
-def download_financial_morningstar(symbol, driver, store, data_dir):
-
-    # Income statement
-    url = ('http://financials.morningstar.com/income-statement/is.html?'
-           't=%s&region=USA&culture=en_US') % symbol
-
-    is_csv = os.path.join(data_dir, '%s Income Statement.csv' %symbol)
-
-    driver.get(url)
+def download_morningstar(driver, freq):
+    if freq == 'Quarterly':
+        driver.execute_script("SRT_stocFund.ChangeFreq(3,'Quarterly')")
+    elif freq == 'Annual':
+        driver.execute_script("SRT_stocFund.ChangeFreq(12,'Annual')")
     driver.execute_script("SRT_stocFund.orderControl('asc','Ascending')")
     # in thousands
     driver.execute_script("SRT_stocFund.ChangeRounding(-1)")
     driver.execute_script("SRT_stocFund.changeDataType('R','Restated')")
-    # download quarterly data
-    driver.execute_script("SRT_stocFund.ChangeFreq(3,'Quarterly')")
     driver.execute_script("SRT_stocFund.Export()")
 
+def store_income(is_csv, store, h5_node):
     @retry(wait_fixed=200, stop_max_delay=10000)
     def read_csv(is_csv):
         return pd.read_csv(is_csv, skiprows=1)
@@ -114,9 +109,24 @@ def download_financial_morningstar(symbol, driver, store, data_dir):
 
     merge_income_items(income)
 
-    income_node = '/quarterly/income/' + symbol
-    if store.get_storer(income_node) == None:
-        store.append(income_node, income, data_columns=True)
+    if store.get_storer(h5_node) == None:
+        store.append(h5_node, income, data_columns=True)
+
+    os.remove(is_csv)
+
+def download_and_store_income(symbol, driver, freq, is_csv, store):
+    download_morningstar(driver, freq)
+    h5_node = '/income/' + freq + '/' + symbol
+    store_income(is_csv, store, h5_node)
+
+def download_financial_morningstar(symbol, driver, store, data_dir):
+    url = ('http://financials.morningstar.com/income-statement/is.html?'
+           't=%s&region=USA&culture=en_US') % symbol
+    is_csv = os.path.join(data_dir, '%s Income Statement.csv' %symbol)
+
+    driver.get(url)
+    download_and_store_income(symbol, driver, 'Quarterly', is_csv, store)
+    download_and_store_income(symbol, driver, 'Annual', is_csv, store)
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock financial data')
@@ -135,7 +145,6 @@ def main():
     store = pd.HDFStore(data_dir + '/financials.h5')
     download_financial_morningstar('QCOM', driver, store, data_dir)
     store.close()
+
 if __name__ == "__main__":
     main()
-
-
