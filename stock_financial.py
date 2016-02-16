@@ -57,6 +57,10 @@ def start_firefox_webdriver(profile_folder):
 
     return driver
 
+@retry(wait_fixed=200, stop_max_delay=10000)
+def read_csv(csv):
+    return pd.read_csv(csv, skiprows=1)
+
 def transpose_statement(statement):
     cols = statement.columns.tolist()
     cols[0] = 'report'
@@ -105,7 +109,7 @@ def merge_items_income(income):
 
     income.columns = [abbrev_statement[x] for x in cols]
 
-def download_morningstar(driver, freq):
+def download_statement(driver, freq):
     if freq == 'Quarterly':
         driver.execute_script("SRT_stocFund.ChangeFreq(3,'Quarterly')")
     elif freq == 'Annual':
@@ -116,11 +120,8 @@ def download_morningstar(driver, freq):
     driver.execute_script("SRT_stocFund.Export()")
 
 def store_statement(st_type, csv, store, h5_node):
-    @retry(wait_fixed=200, stop_max_delay=10000)
-    def read_csv(csv):
-        return pd.read_csv(csv, skiprows=1)
-
     statement = transpose_statement(read_csv(csv))
+    os.remove(csv)
 
     if st_type == 'income':
         merge_items_income(statement)
@@ -128,12 +129,10 @@ def store_statement(st_type, csv, store, h5_node):
     if store.get_storer(h5_node) == None:
         store.append(h5_node, statement, data_columns=True)
 
-    os.remove(csv)
-
 def download_financial_morningstar(symbol, st_type, driver, url, store, csv):
     driver.get(url)
     for f in freq:
-        download_morningstar(driver, f)
+        download_statement(driver, f)
         h5_node = '/' + st_type + '/' + f + '/' + symbol
         store_statement(st_type, csv, store, h5_node)
 
