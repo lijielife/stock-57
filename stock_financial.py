@@ -26,7 +26,7 @@ csv_filename = {
 
 freq = ['Quarterly', 'Annual']
 
-abbrev_statement = {
+abbrev_income = {
     'Revenue': 'revenue',
     'Cost of revenue': 'cost',
     'Gross profit': 'profit',
@@ -89,17 +89,19 @@ def merge_items_income(income):
     cols = income.columns.tolist()
 
     idx = cols.index('Operating expenses')
-    cols.pop(idx)
+    if idx: cols.pop(idx)
 
     idx = cols.index('Earnings per share')
-    cols.pop(idx)
-    cols[idx] = 'Earnings per share Basic'
-    cols[idx + 1] = 'Earnings per share Diluted'
+    if idx:
+        cols.pop(idx)
+        cols[idx] = 'Earnings per share Basic'
+        cols[idx + 1] = 'Earnings per share Diluted'
 
     idx = cols.index('Weighted average shares outstanding')
-    cols.pop(idx)
-    cols[idx] = 'Weighted average shares outstanding Basic'
-    cols[idx + 1] = 'Weighted average shares outstanding Diluted'
+    if idx:
+        cols.pop(idx)
+        cols[idx] = 'Weighted average shares outstanding Basic'
+        cols[idx + 1] = 'Weighted average shares outstanding Diluted'
 
     income.drop(['Operating expenses',
                  'Earnings per share',
@@ -107,7 +109,8 @@ def merge_items_income(income):
                  'TTM'
                  ], axis=1, inplace=True)
 
-    income.columns = [abbrev_statement[x] for x in cols]
+    income.columns = [abbrev_income.get(x) if abbrev_income.get(x)
+                      else x for x in cols]
 
 def download_statement(driver, freq):
     if freq == 'Quarterly':
