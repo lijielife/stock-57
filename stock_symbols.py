@@ -30,19 +30,11 @@ def read_symbols(csv_files):
 def store_symbols(data_dir, symbols):
     store = pd.HDFStore(data_dir + '/symbols.h5')
 
-    symbol_node = '/symbols'
-    if store.get_storer(symbol_node) == None:
-        store.append(symbol_node, symbols, data_columns=True)
-    else:
-        print '/symbols exists'
+    store.put('/symbols', symbols, table=True)
 
-    sector_node = '/sectors'
-    if store.get_storer(sector_node) == None:
-        sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
-        sectors.index=range(0, len(sectors))
-        store.append(sector_node, sectors, data_columns=True)
-    else:
-        print '/sectors exists'
+    sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
+    sectors.index=range(0, len(sectors))
+    store.put('/sectors', sectors, table=True)
 
     store.close()
 
