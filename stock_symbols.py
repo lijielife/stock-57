@@ -46,6 +46,12 @@ def store_symbols(data_dir, symbols):
 
     store.close()
 
+def update_symbols(data_dir):
+    csv_files = download_symbols(data_dir)
+    symbols = read_symbols(csv_files)
+    store_symbols(data_dir, symbols)
+    map(os.remove, csv_files)
+
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock symbols')
     parser.add_argument("data_dir")
@@ -59,9 +65,7 @@ def get_cmd_line():
 
 def main():
     data_dir = get_cmd_line()
-    csv_files = download_symbols(data_dir)
-    symbols = read_symbols(csv_files)
-    store_symbols(data_dir, symbols)
+    update_symbols(data_dir)
 
 if __name__ == "__main__":
     main()
