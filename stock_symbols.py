@@ -4,6 +4,7 @@ import os
 import argparse as ap
 import wget
 import pandas as pd
+import datetime as dt
 
 
 def download_symbols(data_dir):
@@ -12,6 +13,7 @@ def download_symbols(data_dir):
     markets = ['NYSE', 'NASDAQ', 'AMEX']
     csv_files = [wget.download((url % x), out=data_dir + '/' + x + '.csv')
                 for x in markets]
+    print ''
     print 'symbols downloaded'
 
     return csv_files
@@ -27,21 +29,37 @@ def read_symbols(csv_files):
 
     return symbols
 
-def store_symbols(data_dir, symbols):
-    store = pd.HDFStore(data_dir + '/symbols.h5')
+def log_symbols(symbols, s_old):
+    t_str = dt.datetime.today().strftime("%Y-%m-%d")
+    log_a = symbols[~symbols['Symbol'].isin(s_old['Symbol'])][['Symbol',
+                                                               'Name']]
+    log_a['Change'] = 'A'
+    log_a['Date'] = t_str
 
+    log_d = s_old[~s_old['Symbol'].isin(symbols['Symbol'])][['Symbol', 'Name']]
+    log_d['Change'] = 'D'
+    log_d['Date'] = t_str
+
+    return pd.concat([log_a, log_d])
+
+def store_symbols(store, symbols):
+    if store.get_storer('/symbols') != None:
+        s_old = store['/symbols']
+        log = log_symbols(symbols, s_old)
+        print log
+        store.append('/log', log, data_columns=True)
     store.put('/symbols', symbols, table=True)
 
     sectors = symbols[['Sector', 'Industry']].drop_duplicates(keep='last')
     sectors.index=range(0, len(sectors))
     store.put('/sectors', sectors, table=True)
 
-    store.close()
-
 def update_symbols(data_dir):
     csv_files = download_symbols(data_dir)
     symbols = read_symbols(csv_files)
-    store_symbols(data_dir, symbols)
+    store = pd.HDFStore(data_dir + '/symbols.h5')
+    store_symbols(store, symbols)
+    store.close()
     map(os.remove, csv_files)
 
 def get_cmd_line():
