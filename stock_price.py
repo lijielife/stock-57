@@ -11,42 +11,35 @@ import tables as tb
 
 default_start = dt.datetime(1950, 1, 1)
 default_url = 'yahoo'
-default_file = 'stock_data.h5'
+default_file = 'prices.h5'
 
-class stock_price:
-    def __init__(self, ticker):
-        # build stock price in pytable
-        self.ticker = ticker
+def download_price_yahoo(symbols, data_dir):
+    map(lambda x: dr_yahoo(x, data_dir), symbols)
 
-    def store_data(self, data_file):
-        st = pd.HDFStore(data_file)
-        st_node_dir = '/price/' + self.ticker
+def dr_yahoo(symbol, data_dir):
+    st = pd.HDFStore(os.path.join(data_dir, default_file))
+    st_node_dir = '/price/' + symbol
+    node = st.get_storer(st_node_dir)
+    start = default_start
 
-        node = st.get_storer(st_node_dir)
-        if node == None:
-            start = default_start
-        else:
-            nrows = node.table.nrows
-            if nrows > 0:
-                start = st.select(st_node_dir, where=[nrows - 1],
-                                 columns=['Date']).index[0]
-            else:
-                start = default_start
+    if node:
+        nrows = node.table.nrows
+        if nrows:
+            start = st.select(st_node_dir, where=[nrows - 1],
+                    columns=['Date']).index[0]
 
-        print start
+    diff = dt.datetime.today() - start
+    if diff.days > 1:
+        print "%s from [%s] -> today" % (symbol, start)
+        price = pr.DataReader(symbol, "yahoo", start=start)
+        st.append(st_node_dir, price)
+    else:
+        print "%s is already updated!" % symbol
 
-        diff = dt.datetime.today() - start
-        if diff.days > 1:
-            price = pr.DataReader(self.ticker, "yahoo", start=start)
-            st.append(st_node_dir, price)
-        else:
-            print "%s is already updated!" % self.ticker
-
-        st.close()
+    st.close()
 
 def get_cmd_line():
     parser = ap.ArgumentParser(description='update stock price')
-    parser.add_argument("stock_symbol")
     parser.add_argument("data_dir")
     cmd_args = parser.parse_args()
     data_dir = os.path.abspath(cmd_args.data_dir)
@@ -54,16 +47,12 @@ def get_cmd_line():
         print "%s does not exist!" % data_dir
         sys.exit()
 
-    return [cmd_args.stock_symbol, data_dir]
+    return  data_dir
 
 def main():
-    cmd_line = get_cmd_line()
-    symbol = cmd_line[0]
-    folder = cmd_line[1]
-    stfile = folder + '/' + default_file
-    price = stock_price(symbol)
-    print stfile
-    price.store_data(stfile)
+    data_dir = get_cmd_line()
+    symbols = ['QCOM', 'INTC', 'SWKS']
+    price = download_price_yahoo(symbols, data_dir)
     
 if __name__ == "__main__":
     main()
