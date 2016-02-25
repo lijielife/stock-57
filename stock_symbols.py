@@ -6,6 +6,16 @@ import wget
 import pandas as pd
 import datetime as dt
 
+symbol_file = 'symbols.h5'
+data_dir = '/home/yangh/ws/stock-data/'
+
+def select_symbols(sector, industry):
+    store = pd.HDFStore(os.path.join(data_dir, symbol_file))
+    symbols = store['/symbols']
+    sel = symbols[(symbols['Sector'] == sector) & (symbols['Industry'] ==
+            industry)]
+
+    return sel
 
 def download_symbols(data_dir):
     url = ('http://www.nasdaq.com/screening/companies-by-industry.aspx?'
@@ -57,7 +67,7 @@ def store_symbols(store, symbols):
 def update_symbols(data_dir):
     csv_files = download_symbols(data_dir)
     symbols = read_symbols(csv_files)
-    store = pd.HDFStore(data_dir + '/symbols.h5')
+    store = pd.HDFStore(os.path.join(data_dir + symbol_file))
     store_symbols(store, symbols)
     store.close()
     map(os.remove, csv_files)
