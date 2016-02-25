@@ -8,6 +8,7 @@ from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from retrying import retry
 
+
 profile_folder = '/home/yangh/.mozilla/firefox/webdriver-profile'
 
 url_morningstar = ('http://financials.morningstar.com/%s.html?'
@@ -19,7 +20,6 @@ url_statement = {
     'cash_flow': 'cash-flow/cf',
     'ratio': 'ratios/r'
 }
-
 
 csv_filename = {
     'income': 'Income Statement',
@@ -118,12 +118,12 @@ def download_financial(symbol, driver, data_dir):
     store = pd.HDFStore(data_dir + '/financials.h5')
     print symbol + ' downloading...'
 
-    map(lambda x: download_single_statement(symbol, driver, data_dir, store, x), 
+    map(lambda x: download_single_statement(symbol, driver, data_dir, store, x),
         csv_filename.keys())
 
     store.close()
 
-def start_download(symbols, data_dir):
+def download_financial_morningstar(symbols, data_dir):
     driver = start_firefox_webdriver(profile_folder)
     map(lambda x: download_financial(x, driver, data_dir), symbols)
 
@@ -141,7 +141,7 @@ def get_cmd_line():
 def main():
     data_dir = get_cmd_line()
     symbols = ['QCOM', 'SWKS', 'INTC']
-    start_download(symbols, data_dir)
+    download_financial_morningstar(symbols, data_dir)
 
 if __name__ == "__main__":
     main()
