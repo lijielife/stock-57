@@ -12,6 +12,7 @@ import tables as tb
 default_start = dt.datetime(1950, 1, 1)
 default_url = 'yahoo'
 default_file = 'prices.h5'
+default_data_dir = '/home/yangh/ws/stock-data'
 
 def download_price_yahoo(symbols, data_dir):
     map(lambda x: dr_yahoo(x, data_dir), symbols)
