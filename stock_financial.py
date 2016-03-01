@@ -40,19 +40,23 @@ def start_firefox_webdriver(profile_folder):
 def read_csv(csv, skip):
     return pd.read_csv(csv, skiprows=skip)
 
+@retry(wait_fixed=200, stop_max_delay=10000)
+def execute_script(driver, script):
+    driver.execute_script(script)
+
 def download_statement_settings(driver, freq):
     if freq == 'Quarterly':
-        driver.execute_script("SRT_stocFund.ChangeFreq(3,'Quarterly')")
+        execute_script(driver, "SRT_stocFund.ChangeFreq(3,'Quarterly')")
     elif freq == 'Annual':
-        driver.execute_script("SRT_stocFund.ChangeFreq(12,'Annual')")
-    driver.execute_script("SRT_stocFund.orderControl('asc','Ascending')")
-    driver.execute_script("SRT_stocFund.ChangeRounding(-1)") # in thousand
-    driver.execute_script("SRT_stocFund.changeDataType('R','Restated')")
-    driver.execute_script("SRT_stocFund.Export()")
+        execute_script(driver, "SRT_stocFund.ChangeFreq(12,'Annual')")
+    execute_script(driver, "SRT_stocFund.orderControl('asc','Ascending')")
+    execute_script(driver, "SRT_stocFund.ChangeRounding(-1)") # in thousand
+    execute_script(driver, "SRT_stocFund.changeDataType('R','Restated')")
+    execute_script(driver, "SRT_stocFund.Export()")
 
 def download_keyratios_settings(driver):
-    driver.execute_script("orderChange('asc','Ascending')")
-    driver.execute_script("exportKeyStat2CSV()")
+    execute_script(driver, "orderChange('asc','Ascending')")
+    execute_script(driver, "exportKeyStat2CSV()")
 
 # keys cannot be only numbers or have '-', so rename column keys with
 # Yxxxxx-xx
@@ -79,6 +83,11 @@ def store_statement(store, h5_node, statement):
         s_orig = store[h5_node]
         s_diff = list(set(statement.columns.tolist()) -
                       set(s_orig.columns.tolist()))
+
+        print statement.columns.tolist()
+        print s_orig.columns.tolist()
+        print s_diff
+
         if s_diff:
             s_orig[s_diff] = statement[s_diff]
             if 'TTM' in statement:
