@@ -3,6 +3,7 @@
 import os
 import locale
 import pandas as pd
+import matplotlib.pyplot as plt
 from stock_symbols import select_symbols
 from stock_financial import rename_columns_back
 
@@ -39,12 +40,36 @@ def plot_data_and_change(data, title):
 
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(12,4))
 
-    data.plot(ax=axes[0], kind='bar', title=title)
+    data.plot(ax=axes[0], kind='bar', color=set_color(data), title=title)
     chg.plot(ax=axes[1], kind='bar', color=set_color(chg), title='change')
+
 
 def get_revenue(financials):
     return [financials[0].loc['Revenue USD Mil'].apply(locale.atof),
             financials[2].loc['Revenue']]
+
+def get_gross_profit(financials):
+    return [financials[0].loc['Gross Margin %'].apply(locale.atof) *
+            financials[0].loc['Revenue USD Mil'].apply(locale.atof),
+            financials[2].loc['Gross profit']]
+
+def get_gross_margin(financials):
+    q_gross_margin = financials[2].loc['Gross profit'] /\
+                     financials[2].loc['Revenue']
+
+    return [financials[0].loc['Gross Margin %'].apply(locale.atof),
+            q_gross_margin]
+
+def get_op_income(financials):
+    return [financials[0].loc['Operating Income USD Mil'].apply(locale.atof),
+            financials[2].loc['Operating income']]
+
+def get_op_margin(financials):
+    q_op_margin = financials[2].loc['Operating income'] /\
+                  financials[2].loc['Revenue']
+
+    return [financials[0].loc['Operating Margin %'].apply(locale.atof),
+            q_op_margin]
 
 def plot_financials(symbol):
     price = get_price_data(symbol)
@@ -54,4 +79,11 @@ def plot_financials(symbol):
     price['2006-12-01'::].plot(grid=True, figsize=(12,4), title=symbol)
 
     map(lambda x: plot_data_and_change(x, 'revenue'), get_revenue(financials))
-    
+    map(lambda x: plot_data_and_change(x, 'gross_margin'),
+            get_gross_margin(financials))
+    map(lambda x: plot_data_and_change(x, 'op_income'),
+            get_op_income(financials))
+    map(lambda x: plot_data_and_change(x, 'op_margin'),
+            get_op_margin(financials))
+
+map(lambda x: plot_financials(x), sel['Symbol'])
