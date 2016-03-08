@@ -9,6 +9,9 @@ import datetime as dt
 symbol_file = 'symbols.h5'
 data_dir = '/home/yangh/ws/stock-data/'
 
+def pick_symbols():
+    return select_symbols('Basic Industries', 'Package Goods/Cosmetics')
+
 def select_symbols(sector, industry):
     store = pd.HDFStore(os.path.join(data_dir, symbol_file))
     symbols = store['/symbols']
