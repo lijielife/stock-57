@@ -14,9 +14,15 @@ locale.setlocale(locale.LC_NUMERIC, '')
 
 sel = pick_symbols()
 
-nodes = ['/%s/ratio', '/%s/income/Annual', '/%s/income/Quarterly',
-         '/%s/balance_sheet/Quarterly', '/%s/balance_sheet/Annual',
-         '/%s/cash_flow/Quarterly', '/%s/cash_flow/Annual']
+nodes = {
+    'ratio': '/%s/ratio',
+    'in_a': '/%s/income/Annual',
+    'in_q': '/%s/income/Quarterly',
+    'bs_a': '/%s/balance_sheet/Annual',
+    'bs_q': '/%s/balance_sheet/Quarterly',
+    'cf_a': '/%s/cash_flow/Annual',
+    'cf_q': '/%s/cash_flow/Quarterly'
+}
 
 def set_color(df):
     return ['r' if x < 0 else 'b' for x in df]
@@ -31,6 +37,7 @@ def get_financial_data(node):
     data = store[node]
     rename_columns_back(data)
     data.set_index('report', inplace=True)
+    
     return data
     
 def plot_data_and_change(symbol, data, title):
@@ -49,47 +56,54 @@ def plot_item(symbol, title, y_data, q_data):
 
 def get_income_annual(financials):
     y_income = pd.DataFrame()
-    y_income['revenue'] = financials[0].loc['Revenue USD Mil'].apply(locale.atof);
+    y_income['revenue'] = financials['ratio'].loc['Revenue USD Mil'].\
+            apply(locale.atof);
 
-    gross_margin = financials[0].loc['Gross Margin %'].apply(locale.atof) / 100.0
+    gross_margin = financials['ratio'].loc['Gross Margin %'].\
+            apply(locale.atof) / 100.0
+
     y_income['gross_profit'] = y_income['revenue'] * gross_margin
     y_income['gross_margin'] = gross_margin
 
-    y_income['op_income'] = financials[0].loc['Operating Income USD Mil'].\
-                apply(locale.atof)
+    y_income['op_income'] = financials['ratio'].\
+            loc['Operating Income USD Mil'].apply(locale.atof)
+
     y_income['op_margin'] = y_income['op_income'] / y_income['revenue']
 
-    y_income['net_income'] = financials[0].loc['Net Income USD Mil'].\
-                apply(locale.atof)
+    y_income['net_income'] = financials['ratio'].loc['Net Income USD Mil'].\
+            apply(locale.atof)
+
     y_income['net_margin'] = y_income['net_income'] / y_income['revenue']
 
-    y_income['cash_flow'] = financials[0].loc['Operating Cash Flow USD Mil'].\
-                apply(locale.atof)
+    y_income['cash_flow'] = financials['ratio'].\
+            loc['Operating Cash Flow USD Mil'].apply(locale.atof)
+
     y_income['cash_flow_margin'] = y_income['cash_flow'] / y_income['revenue']
 
-    y_income['free_cash_flow'] = financials[0].loc['Free Cash Flow USD Mil'].\
-                apply(locale.atof)
+    y_income['free_cash_flow'] = financials['ratio'].\
+            loc['Free Cash Flow USD Mil'].apply(locale.atof)
+
     y_income['free_cash_margin'] = y_income['free_cash_flow'] / y_income['revenue']
 
     return y_income
 
 def get_income_quarterly(financials):
     q_income = pd.DataFrame()
-    q_income['revenue'] = financials[2].loc['Revenue']
+    q_income['revenue'] = financials['in_q'].loc['Revenue']
 
-    q_income['gross_profit'] = financials[2].loc['Gross profit']
+    q_income['gross_profit'] = financials['in_q'].loc['Gross profit']
     q_income['gross_margin'] = q_income['gross_profit'] / q_income['revenue']
 
-    q_income['op_income'] = financials[2].loc['Operating income']
+    q_income['op_income'] = financials['in_q'].loc['Operating income']
     q_income['op_margin'] = q_income['op_income'] / q_income['revenue']
 
-    q_income['net_income'] = financials[2].loc['Net income']
+    q_income['net_income'] = financials['in_q'].loc['Net income']
     q_income['net_margin'] = q_income['net_income'] / q_income['revenue']
 
-    q_income['cash_flow'] = financials[5].loc['Operating cash flow']
+    q_income['cash_flow'] = financials['cf_q'].loc['Operating cash flow']
     q_income['cash_flow_margin'] = q_income['cash_flow'] / q_income['revenue']
 
-    q_income['free_cash_flow'] = financials[5].loc['Free cash flow']
+    q_income['free_cash_flow'] = financials['cf_q'].loc['Free cash flow']
     q_income['free_cash_margin'] = q_income['free_cash_flow'] /\
             q_income['revenue']
 
@@ -97,33 +111,35 @@ def get_income_quarterly(financials):
 
 def get_balance_anual(financials):
     y_balance = pd.DataFrame()
-    y_balance['cash_value'] = financials[4].loc['Total cash']
-    y_balance['long_term_debt'] = financials[4].\
+    y_balance['cash_value'] = financials['bs_a'].loc['Total cash']
+    y_balance['long_term_debt'] = financials['bs_a'].\
             loc['Total non-current liabilities']
     y_balance['net_cash_value'] = y_balance['cash_value'] - \
             y_balance['long_term_debt']
-
     y_balance['net_cash_per_share'] = y_balance['net_cash_value'] /\
-            financials[1].loc['Basic'].iloc[1]
+            financials['in_a'].loc['Basic'].iloc[1]
 
     return y_balance
 
 def get_balance_quarterly(financials):
     q_balance = pd.DataFrame()
-    q_balance['cash_value'] = financials[3].loc['Total cash']
-    q_balance['long_term_debt'] = financials[3].\
+    q_balance['cash_value'] = financials['bs_q'].loc['Total cash']
+    q_balance['long_term_debt'] = financials['bs_q'].\
             loc['Total non-current liabilities']
     q_balance['net_cash_value'] = q_balance['cash_value'] - \
             q_balance['long_term_debt']
 
     q_balance['net_cash_per_share'] = q_balance['net_cash_value'] /\
-            financials[2].loc['Basic'].iloc[1]
+            financials['in_q'].loc['Basic'].iloc[1]
 
     return q_balance
 
 def plot_financials(symbol):
     price = get_price_data(symbol)
-    financials = [get_financial_data(x % symbol) for x in nodes]
+    
+    financials = {}
+    for x in nodes.keys():
+        financials[x] = get_financial_data(nodes[x] % symbol)
 
     plt.figure()
     price['2006-12-01'::].plot(grid=True, figsize=(12,4), title=symbol)
